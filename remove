@@ -19,9 +19,9 @@ import sys, os
 
 def rm():
     parser = argparse.ArgumentParser(description="remove a script from a repo")
-    parser.add_argument("script_name", type=str)
-    parser.add_argument("-b", "--bind", type=str, nargs='*')
-    parser.add_argument("-s", "--source", action='store_true')
+    parser.add_argument("script_name", type=str, help="the name of the script to remove")
+    parser.add_argument("-b", "--bind", type=str, nargs='*', help="the command(s) to unbind from the script")
+    parser.add_argument("-s", "--source", action='store_true', help="deactivate source mode for the script")
     args = parser.parse_args()
     
     try:

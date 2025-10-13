@@ -18,8 +18,8 @@ import sys, os
 
 def unbind():
     parser = argparse.ArgumentParser(description="unbind selected or all commands from a script")
-    parser.add_argument("script_name", type=str)
-    parser.add_argument("command_names", type=str, nargs='*')
+    parser.add_argument("script_name", type=str, help="the name of the script to unbind commands from")
+    parser.add_argument("command_names", type=str, nargs='*', help="the command(s) to unbind from the script")
     args = parser.parse_args()
     
     # get the current repo

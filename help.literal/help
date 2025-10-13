@@ -1,0 +1,18 @@
+\033[1m\033[32mHELP\033[0m - Display help information about mango commands
+
+\033[1mUSAGE:\033[0m
+    mango @help (command_name)
+
+\033[1mDESCRIPTION:\033[0m
+    Displays help information for mango commands.
+    If no command name is provided, shows a list of all available prebuilt commands.
+    If a command name is provided, shows detailed help for that specific command.
+    For user-defined scripts, attempts to run them with the --help flag.
+
+\033[1mARGUMENTS:\033[0m
+    command_name    Name of the command to get help for (optional)
+
+\033[1mEXAMPLES:\033[0m
+    mango @help                    # Show list of all commands
+    mango @help add                # Show detailed help for the add command
+    mango @help myscript           # Try to show help for a user script

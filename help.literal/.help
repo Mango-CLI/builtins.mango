@@ -32,3 +32,6 @@ Here is a list of prebuilt mango commands and their usage:
               - usage: mango @template list
                        mango @template register
                        mango @template remove [template_name]
+
+  help        display help information about mango commands
+              - usage: mango @help (command_name)

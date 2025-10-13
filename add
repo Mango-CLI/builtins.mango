@@ -19,10 +19,10 @@ import sys, os
 
 def add():
     parser = argparse.ArgumentParser(description="add or edit a script in a repo")
-    parser.add_argument("script_name", type=str)
-    parser.add_argument("-b", "--bind", type=str, nargs='*')
-    parser.add_argument("-s", "--source", action='store_true')
-    parser.add_argument("--noopen", action='store_true')
+    parser.add_argument("script_name", type=str, help="the name of the script to add or edit")
+    parser.add_argument("-b", "--bind", type=str, nargs='*', help="the command(s) to bind to this script (if not specified the script name will be used as the default command)")
+    parser.add_argument("-s", "--source", action='store_true', help="source the script instead of executing it in a sub-shell")
+    parser.add_argument("--noopen", action='store_true', help="do not open the script in the editor after creating it")
     args = parser.parse_args()
     
     # get the current repo

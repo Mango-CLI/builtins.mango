@@ -45,7 +45,7 @@ def list_(search_starting_point):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="list all commands in a repo")
-    parser.add_argument("repo_path", type=str, nargs='?', default='.')
+    parser.add_argument("repo_path", type=str, nargs='?', default='.', help="the path to the mango repo (if not specified, the current directory will be used as trace starting point)")
     args = parser.parse_args()
     
     list_(os.path.abspath(args.repo_path))
