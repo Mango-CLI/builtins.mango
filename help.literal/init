@@ -1,0 +1,20 @@
+\033[1m\033[32mINIT\033[0m - Initialize a new mango repository
+
+\033[1mUSAGE:\033[0m
+    mango @init [repo_path] (-t, --template [template_name])
+
+\033[1mDESCRIPTION:\033[0m
+    Creates a new mango repository at the specified path using the given template.
+    If no path is provided, initializes in the current directory.
+    Default template is 'default'.
+
+\033[1mARGUMENTS:\033[0m
+    repo_path    Path where to create the repo (default: current directory)
+
+\033[1mOPTIONS:\033[0m
+    -t, --template    Template to use for initialization (default: default)
+
+\033[1mEXAMPLES:\033[0m
+    mango @init
+    mango @init ~/my-project
+    mango @init ~/my-project -t python

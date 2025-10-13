@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 """
-rm
+remove
 
-usage: mango @rm [script_name] (-b, --bind [command_name ...]) (-s, --source)
+usage: mango @remove [script_name] (-b, --bind [command_name ...]) (-s, --source)
 
 This host assumes that the script to be removed is present in the closest repo, and raises an error if not.
-Use 'mango @rm [script_name]' to remove all, including script and .instruction references;
-Use 'mango @rm [script_name] -b' to remove all bindings of the script but keep the script itself in the repo.
-Use 'mango @rm [script_name] -b [commands ...]' to remove the bindings in the list, if they exist, from the script.
-Use 'mango @rm [script_name] -s' to deactivate source mode.
+Use 'mango @remove [script_name]' to remove all, including script and .instruction references;
+Use 'mango @remove [script_name] -b' to remove all bindings of the script but keep the script itself in the repo.
+Use 'mango @remove [script_name] -b [commands ...]' to remove the bindings in the list, if they exist, from the script.
+Use 'mango @remove [script_name] -s' to deactivate source mode.
 """
 
 from _common import *

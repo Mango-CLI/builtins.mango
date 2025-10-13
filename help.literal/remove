@@ -1,0 +1,25 @@
+\033[1m\033[32mREMOVE\033[0m - Remove a script and/or its bindings from a mango repository
+
+\033[1mUSAGE:\033[0m
+    mango @remove [script_name] (-b, --bind [command_name ...]) (-s, --source)
+
+\033[1mDESCRIPTION:\033[0m
+    Removes a script and/or its bindings from the current mango repository.
+    Different modes of operation:
+    • Without flags: removes script and all its bindings (requires confirmation)
+    • With -b flag only: removes all bindings but keeps the script
+    • With -b and command names: removes only specified bindings
+    • With -s flag: deactivates source mode for the script
+
+\033[1mARGUMENTS:\033[0m
+    script_name    Name of the script to remove
+
+\033[1mOPTIONS:\033[0m
+    -b, --bind      Remove bindings (all if no commands specified)
+    -s, --source    Deactivate source mode for the script
+
+\033[1mEXAMPLES:\033[0m
+    mango @remove myscript              # Remove script and all bindings
+    mango @remove myscript -b           # Remove all bindings, keep script
+    mango @remove myscript -b cmd1 cmd2 # Remove specific bindings
+    mango @remove myscript -s           # Deactivate source mode

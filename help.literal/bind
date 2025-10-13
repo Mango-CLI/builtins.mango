@@ -1,0 +1,21 @@
+\033[1m\033[32mBIND\033[0m - Bind commands to a script in a mango repository
+
+\033[1mUSAGE:\033[0m
+    mango @bind [script_name] [command_name ...] (-f, --force)
+
+\033[1mDESCRIPTION:\033[0m
+    Binds one or more command names to an existing script.
+    The script must already exist in the repository.
+    Commands must not already be registered unless using the force flag.
+
+\033[1mARGUMENTS:\033[0m
+    script_name      Name of the existing script
+    command_names    One or more command names to bind to the script
+
+\033[1mOPTIONS:\033[0m
+    -f, --force      Force binding even if commands are already registered
+
+\033[1mEXAMPLES:\033[0m
+    mango @bind myscript cmd1
+    mango @bind myscript cmd1 cmd2 cmd3
+    mango @bind myscript existing-cmd -f

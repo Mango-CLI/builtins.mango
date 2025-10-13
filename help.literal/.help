@@ -1,0 +1,34 @@
+Here is a list of prebuilt mango commands and their usage:
+
+  init        create a new mango repo, defaults to in the present working directory, using a template if specified
+              - usage: mango @init [repo_path] (-t, --template [template_git, template_name])
+
+  deinit      delete the mango repo in a folder, defaulting to the present working directory, if it exists
+              - usage: mango @del [repo_path]
+
+  list        list all the scripts in a mango repo, defaulting to the present working directory
+              - usage: mango @list [repo_path]
+
+  add         create a new script in the current mango repo and open it in the default editor
+              - usage: mango @add [script_name] (-b, --bind [command_name ...]) (--noopen)
+
+  remove      remove a script and all bindings from the current mango repo, if it exists
+              - usage: mango @remove [script_name]
+
+  bind        bind a script to one or more commands in the current mango repo
+              - usage: mango @bind [script_name] [command_name ...] (-f, --force)
+
+  unbind      unbind a script from one or more commands in the current mango repo
+              - usage: mango @unbind [script_name] [command_name ...]
+
+  submodule   operate on submodules in the current mango repo
+              - usage: mango @submodule add [repo_git, repo_path] (rename-to)
+                       mango @submodule update (name)
+                       mango @submodule remove [name]
+                       mango @submodule register
+                       mango @submodule list
+  
+  template    invoke template-related commands
+              - usage: mango @template list
+                       mango @template register
+                       mango @template remove [template_name]

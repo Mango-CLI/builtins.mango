@@ -1,0 +1,18 @@
+\033[1m\033[32mUNBIND\033[0m - Unbind commands from a script in a mango repository
+
+\033[1mUSAGE:\033[0m
+    mango @unbind [script_name] (command_name ...)
+
+\033[1mDESCRIPTION:\033[0m
+    Unbinds selected or all commands from a script.
+    If no command names are provided, removes all bindings from the script (requires confirmation).
+    The script must exist in the repository.
+
+\033[1mARGUMENTS:\033[0m
+    script_name      Name of the script to unbind from
+    command_names    Specific commands to unbind (optional)
+
+\033[1mEXAMPLES:\033[0m
+    mango @unbind myscript              # Unbind all commands (requires confirmation)
+    mango @unbind myscript cmd1         # Unbind specific command
+    mango @unbind myscript cmd1 cmd2    # Unbind multiple commands

@@ -1,0 +1,16 @@
+\033[1m\033[32mEDIT\033[0m - Edit a script in the current mango repository
+
+\033[1mUSAGE:\033[0m
+    mango @edit [script_name]
+
+\033[1mDESCRIPTION:\033[0m
+    Opens an existing script in the default editor for editing.
+    The script must exist in the current mango repository.
+    If the script does not exist, an error will be raised.
+
+\033[1mARGUMENTS:\033[0m
+    script_name    Name of the script to edit
+
+\033[1mEXAMPLES:\033[0m
+    mango @edit myscript
+    mango @edit existing-script

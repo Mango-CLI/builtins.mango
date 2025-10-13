@@ -1,0 +1,23 @@
+\033[1m\033[32mADD\033[0m - Create a new script in the current mango repo
+
+\033[1mUSAGE:\033[0m
+    mango @add [script_name] (-b, --bind [command_name ...]) (-s, --source) (--noopen)
+
+\033[1mDESCRIPTION:\033[0m
+    Creates a new script in the current mango repository and opens it in the default editor.
+    If the script already exists, it will be opened for editing.
+    Automatically binds the script to commands if specified.
+
+\033[1mARGUMENTS:\033[0m
+    script_name    Name of the script to create
+
+\033[1mOPTIONS:\033[0m
+    -b, --bind      Bind the script to specified command names
+    -s, --source    Enable source mode for the script
+    --noopen        Create script without opening in editor
+
+\033[1mEXAMPLES:\033[0m
+    mango @add myscript
+    mango @add myscript -b cmd1 cmd2
+    mango @add myscript --noopen
+    mango @add myscript -s

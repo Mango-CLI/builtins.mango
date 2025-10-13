@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-del
+deinit
 
-usage: mango @del [repo_path]
+usage: mango @deinit [repo_path]
 
 This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
 It is called to delete a mango repo.
