@@ -12,10 +12,11 @@ If the script does not exist, an error will be raised. If the command has been r
 The latter can be overridden with the -f(--force) flag.
 """
 
-from _common import *
+from _common import bindCommandsToScript, closestMangoRepo, existRegisteredCommand
+from _print_utils import print
 
 import argparse
-import sys, os
+import os
 
 def bind():
     parser = argparse.ArgumentParser(description="bind one or more commands to a script")
@@ -29,6 +30,7 @@ def bind():
         current_repo = closestMangoRepo()
     except FileNotFoundError:
         print("No mango repo found. (This should already have been thrown though...)")
+        return
     
     # get the script path
     script_path = os.path.join(current_repo, '.mango', args.script_name)

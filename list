@@ -5,31 +5,41 @@ list
 
 usage: mango @list (repo_path)
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
+This is a prebuilt script and is automatically placed in /home/<usr>/.mango,
+aka the home mango repo.
 It is called to list all commands invocable by mango, within a mango repo.
 In other terms, it is a quick way to list and observe the .instructions file in any repo.
 
 If repo_path is not provided, the program will search from . and find the closest one.
 """
 
-from _common import *
-
 import argparse
-import sys, os
+import os
 
-def list_(search_starting_point):
+from _common import closestMangoRepo, existMangoRepo
+from _print_utils import print
+
+
+def list_commands(search_starting_point):
+    """List all commands in a mango repo"""
     if not existMangoRepo(search_starting_point):
-        print(f"{os.path.abspath(search_starting_point)} is not a mango repo. Moving up!", color="yellow")
+        print(
+            f"{os.path.abspath(search_starting_point)} is not a mango repo. Moving up!",
+            color="yellow"
+        )
     repo_path = closestMangoRepo(starting_dir=search_starting_point)
     if repo_path is None:
         print("No mango repo found!", color="red")
         return
-    
+
     instructions = []
-    with open(os.path.join(repo_path, '.mango', '.instructions'), 'r') as f:
+    with open(os.path.join(repo_path, '.mango', '.instructions'), 'r', encoding='utf-8') as f:
         instructions = f.readlines()
-        instructions = [x.strip() for x in instructions if not x.startswith('#') and not x.strip() == '']
-    
+        instructions = [
+            x.strip() for x in instructions
+            if not x.startswith('#') and not x.strip() == ''
+        ]
+
     # print out all the commands
     print(f"Listing commands in repo: {repo_path}")
     print('')
@@ -43,9 +53,17 @@ def list_(search_starting_point):
         print(command, color="blue")
     print('')
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="list all commands in a repo")
-    parser.add_argument("repo_path", type=str, nargs='?', default='.', help="the path to the mango repo (if not specified, the current directory will be used as trace starting point)")
+    parser.add_argument(
+        "repo_path",
+        type=str,
+        nargs='?',
+        default='.',
+        help="the path to the mango repo (if not specified, the current directory "
+             "will be used as trace starting point)"
+    )
     args = parser.parse_args()
-    
-    list_(os.path.abspath(args.repo_path))
+
+    list_commands(os.path.abspath(args.repo_path))

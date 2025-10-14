@@ -5,17 +5,22 @@ edit
 
 usage: mango @edit [script_name]
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
-It is called to edit a script in the current directory. If the script does not exist, an error will be raised.
+This is a prebuilt script and is automatically placed in /home/<usr>/.mango,
+aka the home mango repo.
+It is called to edit a script in the current directory. If the script does not exist,
+an error will be raised.
 """
 
-from _common import *
-from _config import default_editor
-
 import argparse
-import sys, os
+import os
+
+from _common import closestMangoRepo, openInEditor
+from _config import default_editor
+from _print_utils import print
+
 
 def edit():
+    """Edit a script in the current directory."""
     parser = argparse.ArgumentParser(description='Edit a script in the current directory.')
     parser.add_argument('script_name', type=str, help='The name of the script to edit.')
     args = parser.parse_args()
@@ -25,9 +30,13 @@ def edit():
     script_path = os.path.join(repo_path, '.mango', script_name)
 
     if not os.path.exists(script_path):
-        print(f"Error: '{script_name}' does not exist in repo {repo_path}! Maybe call @add to create it?", color="red")
+        print(
+            f"Error: '{script_name}' does not exist in repo {repo_path}! "
+            f"Maybe call @add to create it?",
+            color="red"
+        )
         return
-    
+
     openInEditor(default_editor, script_path)
 
 

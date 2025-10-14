@@ -1,6 +1,9 @@
-import sys, tty
+import sys
+import tty
 import termios
 import _print_utils
+
+from _print_utils import print
 
 def get_key():
     """Reads a single key press and blocks until a key is pressed."""

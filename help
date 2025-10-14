@@ -5,7 +5,8 @@ help
 
 usage: mango @help (command_name)
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
+This is a prebuilt script and is automatically placed in /home/<usr>/.mango,
+aka the home mango repo.
 It is called to display help information for mango commands.
 
 Display help for the prebuilt home mango commands.
@@ -16,11 +17,12 @@ Use `mango @help <command_name>` to see detailed info for a specific command.
 - If the command is user-defined, it will be run with the `--help` flag.
 """
 
-from _common import *
+import argparse
+import os
+
+from _common import closestMangoRepo
 from _print_utils import print, enact_ansi
 
-import argparse
-import sys, os
 
 def get_help_file_path():
     """Get the path to the help literal files directory"""
@@ -28,35 +30,37 @@ def get_help_file_path():
     script_folder_path = os.path.dirname(script_file_path)
     return os.path.join(script_folder_path, 'help.literal')
 
+
 def display_general_help():
     """Display the general help information"""
     help_file_path = get_help_file_path()
     general_help_file = os.path.join(help_file_path, '.help')
-    
+
     if os.path.exists(general_help_file):
-        with open(general_help_file, 'r') as f:
+        with open(general_help_file, 'r', encoding='utf-8') as f:
             content = f.read()
             print(enact_ansi(content))
     else:
         print("General help file not found!", color="red")
 
+
 def display_command_help(command_name):
     """Display help for a specific command"""
     help_file_path = get_help_file_path()
     command_help_file = os.path.join(help_file_path, command_name)
-    
+
     if os.path.exists(command_help_file):
-        with open(command_help_file, 'r') as f:
+        with open(command_help_file, 'r', encoding='utf-8') as f:
             content = f.read()
             # Process escape sequences for colors
             print(enact_ansi(content))
         return True
-    
+
     # If not a prebuilt command, try to find it in the current repo
     try:
         current_repo = closestMangoRepo()
         script_path = os.path.join(current_repo, '.mango', command_name)
-        
+
         if os.path.exists(script_path):
             # Try to run the script with --help flag
             print(f"Running '{command_name} --help'...", color="cyan")
@@ -64,20 +68,28 @@ def display_command_help(command_name):
             return True
     except FileNotFoundError:
         pass
-    
+
     print(f"No help found for command '{command_name}'", color="red")
     print("Use 'mango @help' to see a list of available commands", color="yellow")
     return False
 
-def help():
+
+def help_command():
+    """Display help information about mango commands"""
     parser = argparse.ArgumentParser(description="display help information about mango commands")
-    parser.add_argument("command_name", type=str, nargs='?', help="the command to get help for")
+    parser.add_argument(
+        "command_name",
+        type=str,
+        nargs='?',
+        help="the command to get help for"
+    )
     args = parser.parse_args()
-    
+
     if args.command_name is None:
         display_general_help()
     else:
         display_command_help(args.command_name)
 
+
 if __name__ == '__main__':
-    help()
+    help_command()

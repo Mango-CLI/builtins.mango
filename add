@@ -11,11 +11,19 @@ It is called to add or edit a command within a repo.
 If the script already exists, it will be opened in the default editor.
 """
 
-from _common import *
+from _common import (
+    bindCommandsToScript,
+    closestMangoRepo,
+    executeIfExists,
+    existRegisteredCommand,
+    openInEditor,
+    setSourcePolicy,
+)
 from _config import default_editor
+from _print_utils import print
 
 import argparse
-import sys, os
+import os
 
 def add():
     parser = argparse.ArgumentParser(description="add or edit a script in a repo")
@@ -30,12 +38,13 @@ def add():
         current_repo = closestMangoRepo()
     except FileNotFoundError:
         print("No mango repo found. (This should already have been thrown though...)")
+        return
     
     # get the script path
     script_path = os.path.join(current_repo, '.mango', args.script_name)
     if not os.path.exists(script_path): # if the script does not exist, then create it
         print(f"Creating script at {script_path}", color='green')
-        with open(script_path, 'w') as f:
+        with open(script_path, 'w'):
             pass
         # and change its permissions, defaulting to 754
         os.chmod(script_path, 0o754)
