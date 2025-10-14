@@ -19,11 +19,14 @@ from _common import (
     openInEditor,
     setSourcePolicy,
 )
-from _config import default_editor
 from _print_utils import print
 
 import argparse
 import os
+
+def getEditor():
+    # get the default editor from the environment variable EDITOR, or default to nano
+    return os.environ.get('EDITOR', 'nano')
 
 def add():
     parser = argparse.ArgumentParser(description="add or edit a script in a repo")
@@ -44,6 +47,8 @@ def add():
     script_path = os.path.join(current_repo, '.mango', args.script_name)
     if not os.path.exists(script_path): # if the script does not exist, then create it
         print(f"Creating script at {script_path}", color='green')
+        # Create parent directories if they don't exist
+        os.makedirs(os.path.dirname(script_path), exist_ok=True)
         with open(script_path, 'w'):
             pass
         # and change its permissions, defaulting to 754
@@ -71,7 +76,7 @@ def add():
 
     # open the script in the default editor
     if not args.noopen:
-        openInEditor(default_editor, script_path)
+        openInEditor(getEditor(), script_path)
 
 if __name__ == '__main__':
     add()

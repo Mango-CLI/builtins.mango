@@ -22,6 +22,37 @@ from _print_utils import print
 
 def list_commands(search_starting_point):
     """List all commands in a mango repo"""
+    
+    def list_commands_in_module(mango_path: str, module_path: list[str]):
+        """List all commands in a module"""
+        
+        instructions = []
+        with open(os.path.join(mango_path, '.instructions'), 'r', encoding='utf-8') as f:
+            instructions = f.readlines()
+            instructions = [
+                x.strip() for x in instructions
+                if not x.startswith('#') and not x.strip() == ''
+            ]
+        for line in instructions:
+            if line.startswith('@'):
+                # derivative
+                if line.startswith('@export'):
+                    # export the module
+                    submodule_name = line.split(' ')[1]
+                    submodule_path = os.path.join(mango_path, '.submodules', submodule_name)
+                    if os.path.isdir(submodule_path):
+                        list_commands_in_module(submodule_path, module_path + [submodule_name])
+                continue
+            script, command = line.split(':')
+            # prefix = ':'.join(module_path) + ':' if len(module_path) > 0 else ''
+            # print(prefix, color="magenta", end='')
+            if script.startswith('*'):
+                print(script, color="yellow", end='\t', underlined=True)
+            else:
+                print(script, color="green", end='\t', underlined=True)
+            print(command, color="blue", end='')
+            print('')
+    
     if not existMangoRepo(search_starting_point):
         print(
             f"{os.path.abspath(search_starting_point)} is not a mango repo. Moving up!",
@@ -32,27 +63,23 @@ def list_commands(search_starting_point):
         print("No mango repo found!", color="red")
         return
 
-    instructions = []
-    with open(os.path.join(repo_path, '.mango', '.instructions'), 'r', encoding='utf-8') as f:
-        instructions = f.readlines()
-        instructions = [
-            x.strip() for x in instructions
-            if not x.startswith('#') and not x.strip() == ''
-        ]
-
     # print out all the commands
     print(f"Listing commands in repo: {repo_path}")
     print('')
-    print('Script\t Command', color="cyan", bold=True)
-    for line in instructions:
-        script, command = line.split(':')
-        if script.startswith('*'):
-            print(script, color="yellow", end='\t', underlined=True)
-        else:
-            print(script, color="green", end='\t', underlined=True)
-        print(command, color="blue")
+    print('Script\t Commands', color="cyan", bold=True)
+    list_commands_in_module(os.path.join(repo_path, '.mango'), [])
     print('')
 
+    # print out all the submodules
+    submodules_path = os.path.join(repo_path, '.mango', '.submodules')
+    if os.path.isdir(submodules_path):
+        submodules = os.listdir(submodules_path)
+        if len(submodules) > 0:
+            print(f"Submodules in repo: {repo_path}", color="cyan", bold=True)
+            for submodule in submodules:
+                print("→ ", color="white", bold=True, end='')
+                print(f"{submodule}", color="yellow")
+            print('')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="list all commands in a repo")
