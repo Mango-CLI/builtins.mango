@@ -1,37 +1,33 @@
-Here is a list of prebuilt mango commands and their usage:
+[1;37mhelp topics[0m
 
-  init        create a new mango repo, defaults to in the present working directory, using a template if specified
-              - usage: mango @init [repo_path] (-t, --template [template_git, template_name])
+[90mPrebuilt mango commands you can call with [1;33mmango @[0;37m[name][0m. Use [0;33mmango @help[0m [0;37m[name][0m[90m for details on any entry.[0m
 
-  deinit      delete the mango repo in a folder, defaulting to the present working directory, if it exists
-              - usage: mango @del [repo_path]
+[32m- Create a repository using an optional template:[0m
+  [0;33mmango @init[0m [0;37m[repo_path] (-t template_name)[0m
 
-  list        list all the scripts in a mango repo, defaulting to the present working directory
-              - usage: mango @list [repo_path]
+[32m- Remove the .mango metadata from a directory:[0m
+  [0;33mmango @deinit[0m [0;37m[repo_path][0m
 
-  add         create a new script in the current mango repo and open it in the default editor
-              - usage: mango @add [script_name] (-b, --bind [command_name ...]) (--noopen)
+[32m- List scripts and their bound commands:[0m
+  [0;33mmango @list[0m [0;37m[repo_path][0m
 
-  remove      remove a script and all bindings from the current mango repo, if it exists
-              - usage: mango @remove [script_name]
+[32m- Manage scripts and their bindings:[0m
+  [0;33mmango @add[0m [0;37m<script> (-b names...) (--noopen)[0m
+  [0;33mmango @remove[0m [0;37m<script> (-b [names...]) (-s)[0m
+  [0;33mmango @bind[0m [0;37m<script> <names...> (--force)[0m
+  [0;33mmango @unbind[0m [0;37m<script> (names...)[0m
 
-  bind        bind a script to one or more commands in the current mango repo
-              - usage: mango @bind [script_name] [command_name ...] (-f, --force)
+[32m- Work with repository submodules:[0m
+  [0;33mmango @submodule add[0m [0;37m<repo> <path> (rename-to)[0m
+  [0;33mmango @submodule update[0m [0;37m(name)[0m
+  [0;33mmango @submodule remove[0m [0;37m<name>[0m
+  [0;33mmango @submodule register[0m
+  [0;33mmango @submodule list[0m
 
-  unbind      unbind a script from one or more commands in the current mango repo
-              - usage: mango @unbind [script_name] [command_name ...]
+[32m- Manage registered templates:[0m
+  [0;33mmango @template list[0m
+  [0;33mmango @template register[0m
+  [0;33mmango @template remove[0m [0;37m<template_name>[0m
 
-  submodule   operate on submodules in the current mango repo
-              - usage: mango @submodule add [repo_git, repo_path] (rename-to)
-                       mango @submodule update (name)
-                       mango @submodule remove [name]
-                       mango @submodule register
-                       mango @submodule list
-  
-  template    invoke template-related commands
-              - usage: mango @template list
-                       mango @template register
-                       mango @template remove [template_name]
-
-  help        display help information about mango commands
-              - usage: mango @help (command_name)
+[32m- Show this overview or a detailed help page:[0m
+  [0;33mmango @help[0m [0;37m(command_name)[0m

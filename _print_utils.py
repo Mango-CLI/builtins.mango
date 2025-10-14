@@ -3,23 +3,23 @@ import builtins
 
 # ANSI color codes
 COLORS = {
-    "red": "\033[91m",
-    "green": "\033[92m",
-    "yellow": "\033[93m",
-    "blue": "\033[94m",
-    "magenta": "\033[95m",
-    "cyan": "\033[96m",
-    "white": "\033[97m"
+    "red": "[91m",
+    "green": "[92m",
+    "yellow": "[93m",
+    "blue": "[94m",
+    "magenta": "[95m",
+    "cyan": "[96m",
+    "white": "[97m"
 }
 
 # ANSI style codes
 STYLES = {
-    "bold": "\033[1m",
-    "underlined": "\033[4m",
+    "bold": "[1m",
+    "underlined": "[4m",
 }
 
 # Reset flag
-RESET = "\033[0m"
+RESET = "[0m"
 
 original_print = builtins.print
 
@@ -50,3 +50,24 @@ def print(*args, color=None, bold=False, underlined=False, **kwargs):
 
 # Required to override print globally
 builtins.print = print
+
+def remove_ansi(string: str) -> str:
+    """
+    Remove all ANSI codes from a string.
+    """
+    import re
+    ansi_escape = re.compile(r'''
+        \x1B  # ESC
+        (?:   # 7-bit C1 Fe (except CSI)
+            [@-Z\\-_]
+        |     # or [ for CSI, followed by a control sequence
+            \[
+            [0-?]*  # Parameter bytes
+            [ -/]*  # Intermediate bytes
+            [@-~]   # Final byte
+        )
+    ''', re.VERBOSE)
+    return ansi_escape.sub('', string)
+
+def enact_ansi(string: str) -> str:
+    return string.encode('latin-1').decode('unicode_escape')

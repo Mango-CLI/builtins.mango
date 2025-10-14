@@ -1,18 +1,12 @@
-\033[1m\033[32mHELP\033[0m - Display help information about mango commands
+[1;37mhelp[0m
 
-\033[1mUSAGE:\033[0m
-    mango @help (command_name)
+[37mDisplay short usage notes for mango builtins or pass through to user scripts. With no subject, show the list of available builtins.[0m
 
-\033[1mDESCRIPTION:\033[0m
-    Displays help information for mango commands.
-    If no command name is provided, shows a list of all available prebuilt commands.
-    If a command name is provided, shows detailed help for that specific command.
-    For user-defined scripts, attempts to run them with the --help flag.
+[32m- List all builtin help topics:[0m
+        [33mmango @help[0m
 
-\033[1mARGUMENTS:\033[0m
-    command_name    Name of the command to get help for (optional)
+[32m- View the help page for a builtin command:[0m
+        [33mmango @help[0m [37madd[0m
 
-\033[1mEXAMPLES:\033[0m
-    mango @help                    # Show list of all commands
-    mango @help add                # Show detailed help for the add command
-    mango @help myscript           # Try to show help for a user script
+[32m- Ask a user-defined script to print its own help:[0m
+        [33mmango @help[0m [37mdeploy-script[0m

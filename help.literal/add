@@ -1,23 +1,15 @@
-\033[1m\033[32mADD\033[0m - Create a new script in the current mango repo
+[1;37madd[0m
 
-\033[1mUSAGE:\033[0m
-    mango @add [script_name] (-b, --bind [command_name ...]) (-s, --source) (--noopen)
+[37mCreate or reopen a script in the current mango repository, binding commands or enabling source mode as needed. Existing scripts are never overwritten, only reopened.[0m
 
-\033[1mDESCRIPTION:\033[0m
-    Creates a new script in the current mango repository and opens it in the default editor.
-    If the script already exists, it will be opened for editing.
-    Automatically binds the script to commands if specified.
+[32m- Create a script and open it in your configured editor:[0m
+    [33mmango @add [37mscript[0m
 
-\033[1mARGUMENTS:\033[0m
-    script_name    Name of the script to create
+[32m- Bind new command names while creating the script:[0m
+    [33mmango @add [37mscript -b binding_1 binding_2[0m
 
-\033[1mOPTIONS:\033[0m
-    -b, --bind      Bind the script to specified command names
-    -s, --source    Enable source mode for the script
-    --noopen        Create script without opening in editor
+[32m- Enable source mode (script runs in the current shell):[0m
+    [33mmango @add [37mscript -s[0m
 
-\033[1mEXAMPLES:\033[0m
-    mango @add myscript
-    mango @add myscript -b cmd1 cmd2
-    mango @add myscript --noopen
-    mango @add myscript -s
+[32m- Skip opening the editor after scaffolding the script:[0m
+    [33mmango @add [37mscript --noopen[0m

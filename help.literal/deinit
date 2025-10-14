@@ -1,16 +1,9 @@
-\033[1m\033[32mDEL\033[0m - Deinit a mango repository
+[1;37mdeinit[0m
 
-\033[1mUSAGE:\033[0m
-    mango @deinit [repo_path]
+[37mRemove the mango repository metadata (the .mango folder) from a directory after confirming the deletion. Defaults to the current working tree.[0m
 
-\033[1mDESCRIPTION:\033[0m
-    Deletes a mango repository by removing the .mango folder.
-    If no path is provided, attempts to delete the repo in the current directory.
-    Requires confirmation before proceeding with deletion.
+[32m- Deinitialize the repository in the current directory:[0m
+        [33mmango @deinit[0m
 
-\033[1mARGUMENTS:\033[0m
-    repo_path    Path to the mango repository to delete (default: current directory)
-
-\033[1mEXAMPLES:\033[0m
-    mango @deinit
-    mango @deinit ~/old-project
+[32m- Deinitialize a repository at another path:[0m
+        [33mmango @deinit[0m [37m~/old-project[0m

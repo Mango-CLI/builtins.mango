@@ -17,6 +17,7 @@ Use `mango @help <command_name>` to see detailed info for a specific command.
 """
 
 from _common import *
+from _print_utils import print, enact_ansi
 
 import argparse
 import sys, os
@@ -34,7 +35,8 @@ def display_general_help():
     
     if os.path.exists(general_help_file):
         with open(general_help_file, 'r') as f:
-            print(f.read())
+            content = f.read()
+            print(enact_ansi(content))
     else:
         print("General help file not found!", color="red")
 
@@ -47,8 +49,7 @@ def display_command_help(command_name):
         with open(command_help_file, 'r') as f:
             content = f.read()
             # Process escape sequences for colors
-            content = content.replace('\\033', '\033')
-            print(content)
+            print(enact_ansi(content))
         return True
     
     # If not a prebuilt command, try to find it in the current repo

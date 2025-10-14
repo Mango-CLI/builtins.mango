@@ -1,16 +1,9 @@
-\033[1m\033[32mLIST\033[0m - List all scripts in a mango repository
+[1;37mlist[0m
 
-\033[1mUSAGE:\033[0m
-    mango @list [repo_path]
+[37mShow the scripts in a mango repository along with the commands bound to each script. Searches upward from the current directory if no path is given.[0m
 
-\033[1mDESCRIPTION:\033[0m
-    Lists all scripts and their bound commands in a mango repository.
-    If no path is provided, searches from the current directory upward for the closest repo.
-    Displays the script name and associated commands in a formatted table.
+[32m- List scripts for the current repository:[0m
+        [33mmango @list[0m
 
-\033[1mARGUMENTS:\033[0m
-    repo_path    Path to the mango repository to list (default: current directory)
-
-\033[1mEXAMPLES:\033[0m
-    mango @list
-    mango @list ~/my-project
+[32m- List scripts for a repository at another path:[0m
+        [33mmango @list[0m [37m~/projects/mango-demo[0m

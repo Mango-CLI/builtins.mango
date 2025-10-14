@@ -22,16 +22,16 @@ def hideCursor(func):
     """Decorator that hides the cursor before running the function and shows it afterwards."""
     def wrapper(*args, **kwargs):
         try:
-            print("\033[?25l", end='')  # Hide cursor
+            print("[?25l", end='')  # Hide cursor
             return func(*args, **kwargs)
         finally:
-            print("\033[?25h", end='')  # Show cursor
+            print("[?25h", end='')  # Show cursor
     return wrapper
 
 def removeLines(n: int):
     """Removes the last n lines from the terminal."""
     for _ in range(n):
-        print("\033[F\033[K", end='')
+        print("[F[K", end='')
 
 def makeQuery(section_name: str, color: str = "cyan", prefix: str = "+ ", bold: bool = True):
     """Prints a section with the given name."""
