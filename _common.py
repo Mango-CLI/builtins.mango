@@ -2,6 +2,7 @@ import os
 import shutil
 
 import _print_utils  # noqa: F401
+from _print_utils import print
 
 
 def existMangoRepo(scan_path_str: str) -> bool:
@@ -63,7 +64,7 @@ def removeFolderRecursively(folder_path: str) -> None:
             elif os.path.isdir(file_path):
                 shutil.rmtree(file_path)
         except Exception as e:
-            print(f"Remove failed: {e}")
+            print(f"Remove failed: {e}", color="white")
             raise e
     os.rmdir(folder_path)
 
@@ -151,7 +152,7 @@ def bindCommandsToScript(repo_path: str, command_names: list, script_name: str) 
             if line.startswith(f"{script_name}:") or line.startswith(
                 f"*{script_name}:"
             ):
-                print(f"line: {line}")
+                print(f"line: {line}", color="gray")
                 nonlocal has_appended
                 has_appended = True
                 present_commands = line.split(":")[1].strip().split(" ")
@@ -163,7 +164,8 @@ def bindCommandsToScript(repo_path: str, command_names: list, script_name: str) 
                     "command_names: {command_names}".format(
                         present_commands=present_commands,
                         command_names=command_names,
-                    )
+                    ),
+                    color="gray"
                 )
                 new_commands = set(present_commands + command_names)
                 line = f"{script_name}: {' '.join(new_commands)}\n"

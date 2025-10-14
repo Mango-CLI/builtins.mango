@@ -15,8 +15,7 @@ import argparse
 import os
 
 from _common import closestMangoRepo, openInEditor
-from _config import default_editor
-from _print_utils import print
+from _print_utils import fatal_error
 
 
 def edit():
@@ -26,17 +25,19 @@ def edit():
     args = parser.parse_args()
 
     script_name = args.script_name
-    repo_path = closestMangoRepo(os.getcwd())
+    
+    try:
+        repo_path = closestMangoRepo(os.getcwd())
+    except FileNotFoundError:
+        fatal_error("No mango repo found.")
+        
     script_path = os.path.join(repo_path, '.mango', script_name)
 
     if not os.path.exists(script_path):
-        print(
-            f"Error: '{script_name}' does not exist in repo {repo_path}! "
-            f"Maybe call @add to create it?",
-            color="red"
-        )
-        return
+        fatal_error(f"'{script_name}' does not exist in repo {repo_path}! Maybe call @add to create it?")
 
+    # Get the default editor from environment variable or use nano
+    default_editor = os.environ.get('EDITOR', 'nano')
     openInEditor(default_editor, script_path)
 
 

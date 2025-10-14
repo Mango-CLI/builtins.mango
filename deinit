@@ -16,7 +16,7 @@ import argparse
 import os
 
 from _common import existMangoRepo, removeFolderRecursively
-from _print_utils import print
+from _print_utils import print, fatal_error
 
 
 def delete_repo(repo_path: str):
@@ -29,9 +29,9 @@ def delete_repo(repo_path: str):
     # Get the directory to delete
     dir_to_del = os.path.abspath(repo_path)
     if not existMangoRepo(dir_to_del):
-        raise FileNotFoundError("repo not found")
+        fatal_error("Repo not found")
 
-    print("Deleting the mango repo", color='green')
+    print("Deleting the mango repo", color='white')
     # Delete the .mango folder
     removeFolderRecursively(os.path.join(dir_to_del, '.mango'))
 
@@ -52,12 +52,7 @@ def delete_():
     args = parser.parse_args()
 
     if not existMangoRepo(args.repo_path):
-        print(
-            f"Hmm, the directory {args.repo_path} is not a mango repo.",
-            color='red',
-            bold=True
-        )
-        return
+        fatal_error(f"The directory {args.repo_path} is not a mango repo.")
 
     # Delete the repo
     try:
@@ -71,11 +66,7 @@ def delete_():
             return
         delete_repo(args.repo_path)
     except FileNotFoundError:
-        print(
-            f"Oops! The directory {args.repo_path} is not a mango repo.",
-            color='red',
-            bold=True
-        )
+        fatal_error(f"The directory {args.repo_path} is not a mango repo.")
 
 
 if __name__ == '__main__':

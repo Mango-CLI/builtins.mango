@@ -26,7 +26,7 @@ from _common import (
     unbindScriptAll,
     unbindScriptSelectively
 )
-from _print_utils import print
+from _print_utils import print, fatal_error
 
 
 def rm():
@@ -55,17 +55,11 @@ def rm():
     try:
         current_repo = closestMangoRepo()
     except FileNotFoundError:
-        print("No mango repo found. (This should already have been thrown though...)")
-        return
+        fatal_error("No mango repo found.")
 
     script_path = os.path.join(current_repo, '.mango', args.script_name)
     if not os.path.exists(script_path):
-        print(
-            f"No script is found at {script_path}. Use mango @list to list all you have :>",
-            color='red',
-            bold=True
-        )
-        return
+        fatal_error(f"No script is found at {script_path}. Use mango @list to list all you have :>")
 
     if args.bind is None and not args.source:
         # The original script would be removed
@@ -74,7 +68,7 @@ def rm():
             color='yellow',
             bold=True
         )
-        print("Are you sure to proceed? (y/N)", end=' ', color='cyan')
+        print("Are you sure to proceed? (y/N)", end=' ', color='white')
         if input().lower() != 'y':
             return
         os.remove(script_path)
@@ -89,14 +83,14 @@ def rm():
                 color='yellow',
                 bold=True
             )
-            print("Are you sure to proceed? (y/N)", end=' ', color='cyan')
+            print("Are you sure to proceed? (y/N)", end=' ', color='white')
             if input().lower() != 'y':
                 return
             unbindScriptAll(repo_path=current_repo, script_name=args.script_name)
         elif args.bind is not None:
             print(
                 f"Unbinding the following commands from script '{args.script_name}': {args.bind}",
-                color='magenta'
+                color='white'
             )
             unbindScriptSelectively(
                 repo_path=current_repo,
@@ -106,7 +100,7 @@ def rm():
         if args.source:
             print(
                 f"Deactivating source mode for script '{args.script_name}'",
-                color='magenta'
+                color='white'
             )
             setSourcePolicy(
                 repo_path=current_repo,

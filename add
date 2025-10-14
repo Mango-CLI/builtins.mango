@@ -19,7 +19,7 @@ from _common import (
     openInEditor,
     setSourcePolicy,
 )
-from _print_utils import print
+from _print_utils import print, fatal_error
 
 import argparse
 import os
@@ -40,13 +40,12 @@ def add():
     try:
         current_repo = closestMangoRepo()
     except FileNotFoundError:
-        print("No mango repo found. (This should already have been thrown though...)")
-        return
+        fatal_error("No mango repo found.")
     
     # get the script path
     script_path = os.path.join(current_repo, '.mango', args.script_name)
     if not os.path.exists(script_path): # if the script does not exist, then create it
-        print(f"Creating script at {script_path}", color='green')
+        print(f"Creating script at {script_path}", color='gray')
         # Create parent directories if they don't exist
         os.makedirs(os.path.dirname(script_path), exist_ok=True)
         with open(script_path, 'w'):
@@ -56,9 +55,9 @@ def add():
         # after this, call the hook .on-add
         executeIfExists(os.path.join(current_repo, '.mango', ".on-add"), args=[args.script_name, '' if args.bind is None else ' '.join(args.bind)])
     
-    print("Editing the .instructions file", color='magenta')
+    print("Editing the .instructions file", color='gray')
     if args.bind is None and not existRegisteredCommand(current_repo, args.script_name):
-        print(f"No bindings specified. '{args.script_name.replace(' ', '_')}' will be configured as the default command.", color='yellow', underlined=True)
+        print(f"No bindings specified. '{args.script_name.replace(' ', '_')}' will be configured as the default command.", color='yellow')
         to_bind = [args.script_name.replace(' ', '_')]
     else:
         to_bind = args.bind
@@ -67,8 +66,7 @@ def add():
     if to_bind is not None:
         for command in to_bind:
             if existRegisteredCommand(current_repo, command):
-                print(f"Command '{command}' is already registered in this repo. Please unbind it first.", color='red', bold=True)
-                return
+                fatal_error(f"Command '{command}' is already registered in this repo. Please unbind it first.")
         # insert the bindings into .instructions
         bindCommandsToScript(repo_path=current_repo, script_name=args.script_name, command_names=to_bind)
     

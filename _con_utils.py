@@ -36,12 +36,12 @@ def removeLines(n: int):
     for _ in range(n):
         print("[F[K", end='')
 
-def makeQuery(section_name: str, color: str = "cyan", prefix: str = "+ ", bold: bool = True):
+def makeQuery(section_name: str, color: str = "white", prefix: str = "+ ", bold: bool = True):
     """Prints a section with the given name."""
     print(prefix, color=color, bold=bold, end='')
     print(section_name, color=color, bold=bold)
 
-def getInput(prompt: str, prompt_color: str = "white", response_color: str = "cyan", prefix: str = "> ", bold: bool = False):
+def getInput(prompt: str, prompt_color: str = "white", response_color: str = "white", prefix: str = "> ", bold: bool = False):
     """Prints a prompt and returns the user input."""
     print(prefix, color=prompt_color, bold=bold, end='')
     if prompt:
@@ -54,7 +54,7 @@ def getInput(prompt: str, prompt_color: str = "white", response_color: str = "cy
     return response
 
 @hideCursor
-def launchSelectMenu(options: list, selected_prefix: str = "> ", selected_color: str = "cyan", unselected_prefix: str = "  ", unselected_color: str = "white"):
+def launchSelectMenu(options: list, selected_prefix: str = "> ", selected_color: str = "white", unselected_prefix: str = "  ", unselected_color: str = "gray"):
     """Launches a select menu with the given options and returns the index of the selected option."""
     selected_line_number = 0
     while True:

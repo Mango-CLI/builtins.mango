@@ -1,5 +1,6 @@
 import sys
 import builtins
+from typing import Never
 
 # ANSI color codes
 COLORS = {
@@ -9,7 +10,10 @@ COLORS = {
     "blue": "[94m",
     "magenta": "[95m",
     "cyan": "[96m",
-    "white": "[97m"
+    "white": "[97m",
+    "grey": "[90m",
+    "gray": "[90m",
+    "black": "[90m",
 }
 
 # ANSI style codes
@@ -71,3 +75,13 @@ def remove_ansi(string: str) -> str:
 
 def enact_ansi(string: str) -> str:
     return string.encode('latin-1').decode('unicode_escape')
+
+def fatal_error(message: str) -> Never:
+    """
+    Print a fatal error message with a red cross and exit with code -1.
+    
+    Args:
+        message (str): The error message to display
+    """
+    print(f"✗ {message}", color="red", bold=True)
+    sys.exit(-1)

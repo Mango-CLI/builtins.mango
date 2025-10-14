@@ -21,7 +21,7 @@ import argparse
 import os
 
 from _common import closestMangoRepo
-from _print_utils import print, enact_ansi
+from _print_utils import print, enact_ansi, fatal_error
 
 
 def get_help_file_path():
@@ -41,7 +41,7 @@ def display_general_help():
             content = f.read()
             print(enact_ansi(content))
     else:
-        print("General help file not found!", color="red")
+        fatal_error("General help file not found!")
 
 
 def display_command_help(command_name):
@@ -63,13 +63,13 @@ def display_command_help(command_name):
 
         if os.path.exists(script_path):
             # Try to run the script with --help flag
-            print(f"Running '{command_name} --help'...", color="cyan")
+            print(f"Running '{command_name} --help'...", color="white")
             os.system(f"{script_path} --help")
             return True
     except FileNotFoundError:
         pass
 
-    print(f"No help found for command '{command_name}'", color="red")
+    print(f"No help found for command '{command_name}'", color="white")
     print("Use 'mango @help' to see a list of available commands", color="yellow")
     return False
 

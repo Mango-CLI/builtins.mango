@@ -13,7 +13,7 @@ The latter can be overridden with the -f(--force) flag.
 """
 
 from _common import bindCommandsToScript, closestMangoRepo, existRegisteredCommand
-from _print_utils import print
+from _print_utils import print, fatal_error
 
 import argparse
 import os
@@ -29,26 +29,23 @@ def bind():
     try:
         current_repo = closestMangoRepo()
     except FileNotFoundError:
-        print("No mango repo found. (This should already have been thrown though...)")
-        return
+        fatal_error("No mango repo found.")
     
     # get the script path
     script_path = os.path.join(current_repo, '.mango', args.script_name)
     if not os.path.exists(script_path): # if the script does not exist, then create it
-        print(f"Sorry, script '{args.script_name}' does not exist. Maybe you can create it using @add ?", color="red", bold=True)
-        return
+        fatal_error(f"Script '{args.script_name}' does not exist. Maybe you can create it using @add?")
     
     # if any of the bindings have been registered in this repo, and there is no force flag, raise an error
     if not args.force:
         for command in args.command_names:
             if existRegisteredCommand(current_repo, command):
-                print(f"Command '{command}' is already registered in this repo. Use -f or --force to force a shadowed binding.", color='red', bold=True)
-                return
+                fatal_error(f"Command '{command}' is already registered in this repo. Use -f or --force to force a shadowed binding.")
     
     # insert the bindings into .instructions
     bindCommandsToScript(repo_path=current_repo, script_name=args.script_name, command_names=args.command_names)
     
-    print(f"Bound the given commands to script '{args.script_name}'.", color="green")
+    print(f"Bound the given commands to script '{args.script_name}'.", color="white")
 
 
 if __name__ == '__main__':
