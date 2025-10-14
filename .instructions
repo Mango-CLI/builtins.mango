@@ -3,11 +3,12 @@
 # making the user's home directory a mango repo.
 # This in turn enables that the built-in mango @<host commands> can be called from anywhere under the user's home directory.
 
-init: init i
-del: del d
-add: add a
-rm: remove rm r
-list: list l
-edit: edit e
-bind: bind b
-unbind: unbind ub
+init: init
+del: del
+add: add
+rm: remove
+list: list
+edit: edit
+bind: bind
+unbind: unbind
+help: help
