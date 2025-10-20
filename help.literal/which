@@ -1,0 +1,9 @@
+[1;37mwhich[0m
+
+[37mShow which script a command is bound to, or show all commands bound to a script.[0m
+
+[32m- Find which script a command is bound to:[0m
+        [33mmango @which [37mbinding[0m
+
+[32m- Find which script a @command is bound to:[0m
+        [33mmango @which [37m@binding[0m

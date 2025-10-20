@@ -1,20 +1,76 @@
 import os
 import shutil
 
-import _print_utils  # noqa: F401
-from _print_utils import print
+import _cprint  # noqa: F401
+from _cprint import print
+from dataclasses import dataclass
+from typing import Callable
 
 
-def existMangoRepo(scan_path_str: str) -> bool:
+#: Common Mango Structures
+
+@dataclass
+class ScriptInfo:
+    virtual_submodule_path: list[str]
+    within_submodule_path: str  # relative path to script from the last submodule
+    source: bool
+    bindings: list[str]
+    
+    def relativeOSPath(self) -> str:
+        """get the relative OS path of the script to the base mango module.
+
+        Return: the relative OS path of the script to the base mango module.
+        """
+
+        submodule_os_path = virtualToRelativePath(":".join(self.virtual_submodule_path))
+        return os.path.join(submodule_os_path, self.within_submodule_path)
+    
+    def absoluteOSPath(self, base_module_path: str) -> str:
+        """get the absolute OS path of the script in the mango repo.
+
+        Keyword arguments:
+        - base_module_path -- the path to the base mango module
+
+        Return: the absolute OS path of the script in the mango repo
+        """
+
+        return os.path.join(base_module_path, self.relativeOSPath())
+    
+    def isBoundTo(self, binding: str) -> bool:
+        """check whether the script is bound to a command.
+
+        Keyword arguments:
+        - binding -- the binding to check
+
+        Return: bool for whether the script is bound to the binding
+        """
+
+        return binding in self.bindings
+
+
+#: Common Utility Functions for Mango
+
+def isMangoRepo(path_str: str) -> bool:
     """check whether a directory is a mango repo.
 
     Keyword arguments:
-    - scan_path_str -- the string of the directory to check
+    - path_str -- the string of the directory to check
 
     Return: bool for whether the directory is a mango repo
     """
 
-    return os.path.exists(os.path.join(scan_path_str, ".mango"))
+    return os.path.exists(os.path.join(path_str, ".mango"))
+
+def isMangoModule(path_str: str) -> bool:
+    """check whether a directory is a mango module.
+
+    Keyword arguments:
+    - path_str -- the string of the directory to check
+
+    Return: bool for whether the directory is a mango module
+    """
+
+    return os.path.exists(os.path.join(path_str, ".instructions"))
 
 def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
     """find the first mango repo up the directory tree.
@@ -26,10 +82,216 @@ def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
 
     cur_exec_path_str = starting_dir
     while cur_exec_path_str != "/":
-        if existMangoRepo(cur_exec_path_str):
+        if isMangoRepo(cur_exec_path_str):
             return cur_exec_path_str
         cur_exec_path_str = os.path.dirname(cur_exec_path_str)
     raise FileNotFoundError("mango repo not found")
+
+def repoToBaseModulePath(repo_path: str) -> str:
+    """convert a mango repo path to its base module path.
+
+    raises a ValueError if the path is not a mango repo.
+
+    Keyword arguments:
+    - repo_path -- the path to the mango repo
+
+    Return: the base module path of the mango repo
+    """
+
+    abs_repo_path = os.path.abspath(repo_path)
+    if not isMangoRepo(abs_repo_path):
+        raise ValueError(f"{repo_path} is not a mango repo")
+    return os.path.join(abs_repo_path, ".mango")
+
+def virtualToRelativePath(virtual_submodule_path: str) -> str:
+    """convert a mango submodule path to an OS path.
+
+    Keyword arguments:
+    - virtual_path -- the virtual path to convert
+
+    Return: the OS path of the mango submodule path
+    """
+
+    segments = virtual_submodule_path.split(":")
+    ret = "."
+    for segment in segments:
+        ret = os.path.join(ret, '.submodules', segment)
+    return ret
+
+def getBindingsForLine(line: str) -> list[str]:
+    """get the bindings from a line in the .instructions file.
+
+    Keyword arguments:
+    - line -- the line to extract bindings from
+
+    Return: a list of bindings in the line
+    """
+
+    if ":" not in line:
+        return []
+    return line.split(":")[1].strip().split()
+
+def getRegisteredScripts(mango_module_path: str, starting_submodule: list[str] = []) -> list[ScriptInfo]:
+    """get a list of registered scripts in the mango repo.
+
+    Keyword arguments:
+    - mango_module_path -- the path to the mango module
+
+    Return: a list of ScriptInfo objects representing the registered scripts
+    """
+
+    instructions_path = os.path.join(mango_module_path, ".instructions")
+    scripts = []
+    with open(instructions_path, "r") as instructions_file:
+        for line in instructions_file:
+            line = line.strip()
+            if line.startswith('#') or line == "":
+                continue
+            
+            if line.startswith("["):
+                if "]" not in line:
+                    continue
+                submodule_name = line[1: line.index("]")]
+                remaining = line[line.index("]") + 1 :].strip()
+                submodule_registry = getRegisteredScripts(
+                    os.path.join(
+                        mango_module_path,
+                        ".submodules",
+                        submodule_name,
+                    ),
+                    starting_submodule=starting_submodule + [submodule_name],
+                )
+                if remaining == "*":
+                    scripts += submodule_registry
+                else:
+                    for script in submodule_registry:
+                        if script.isBoundTo(remaining):
+                            scripts.append(ScriptInfo(script.virtual_submodule_path, script.within_submodule_path, script.source, [remaining]))
+                continue
+            
+            if line.startswith("*"):
+                script_path = line.split(":")[0][1:]
+                bindings = line.split(":")[1].strip().split()
+                source_policy = True
+            else:
+                script_path = line.split(":")[0]
+                bindings = line.split(":")[1].strip().split()
+                source_policy = False
+            scripts.append(ScriptInfo(
+                virtual_submodule_path=starting_submodule,
+                within_submodule_path=script_path,
+                source=source_policy,
+                bindings=bindings,
+            ))
+    return scripts
+
+def existScript(mango_module_path: str, script_name: str) -> bool:
+    """determine whether a script exists in the mango repo
+
+    Keyword arguments:
+    - mango_module_path -- the path to the mango module
+    - script_name -- the name of the script
+    """
+
+    return os.path.exists(os.path.join(mango_module_path, ".mango", script_name))
+
+def existBinding(mango_module_path: str, command_name: str) -> bool:
+    """determine whether a command binding exists in the mango repo
+
+    Keyword arguments:
+    - mango_module_path -- the path to the mango module
+    - command_name -- the name of the command
+    """
+
+    registered_scripts = getRegisteredScripts(mango_module_path)
+    for script in registered_scripts:
+        if script.isBoundTo(command_name):
+            return True
+    return False
+
+
+#: Instructions Handlers
+
+def enactInstructionsList(func: Callable) -> Callable:
+    """enact a function on a .instruction file."""
+
+    def wrapper(*args, **kwargs):
+        instructions_path = os.path.join(
+            kwargs['mango_module_path'],
+            ".instructions",
+        )
+        with open(instructions_path, "r") as instructions_file:
+            lines = instructions_file.readlines()
+        lines = func(*args, **kwargs, lines=lines)
+        with open(instructions_path, "w") as instructions_file:
+            instructions_file.writelines(lines)
+
+    return wrapper
+
+@enactInstructionsList
+def setSourcePolicy(mango_module_path: str, script_name: str, use_source: bool, lines: list[str] | None = None):
+    """set the source policy for a single script.
+
+    Updates the change in the .instructions file.
+
+    Keyword arguments:
+    - mango_module_path -- the path to the mango repo
+    - lines -- the lines of the .instructions file
+    - script_name -- the name of the script to dereference
+    - use_source -- the new source policy for the script
+    """
+
+    if lines is None:
+        return []
+
+    def processLine(line: str) -> str:
+        if line.startswith(f"{script_name}:") and use_source:
+            return f"*{script_name}: {line.split(':')[1]}"
+        if line.startswith(f"*{script_name}:") and not use_source:
+            return f"{script_name}: {line.split(':')[1]}"
+        return line
+
+    return [processLine(line) for line in lines]
+
+@enactInstructionsList
+def bindToItem(mango_module_path: str, submodule: str | None, item: str, bindings: list, lines: list[str] | None = None):
+    """bind a list of commands to a script-like
+    
+    Keyword arguments:
+    - mango_module_path -- the path to the mango repo
+    - script_like -- the name of the script or submodule binding to bind to
+    - bindings -- the names of the commands to bind
+    - submodule -- the submodule to bind from (if any)
+    """
+    
+    if lines is None:
+        return []
+
+    submodule_prefix = "" if submodule is None else f"[{submodule}] "
+    line = f"{submodule_prefix}{item}: {' '.join(bindings)}\n"
+    lines = [line] + lines
+    return lines
+
+@enactInstructionsList
+def exportSubmoduleBindings(mango_module_path: str, submodule: str, lines: list[str] | None = None):
+    """export bindings from a submodule.
+
+    Keyword arguments:
+    - mango_module_path -- the path to the mango repo
+    - submodule -- the name of the submodule to export from
+    - bindings -- the names of the commands to export
+    """
+
+    if lines is None:
+        return []
+
+    submodule_prefix = f"[{submodule}] "
+    line = f"{submodule_prefix} *\n"
+    lines = [line] + lines
+    return lines
+
+
+#: Broad Utility Functions
 
 def executeIfExists(executable_path: str, args, throw: bool = False) -> None:
     """execute a command if it exists in the path
@@ -68,116 +330,6 @@ def removeFolderRecursively(folder_path: str) -> None:
             raise e
     os.rmdir(folder_path)
 
-def existRegisteredScript(repo_path: str, script_name: str) -> bool:
-    """determine whether a script is registered in the .instructions file.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - script_name -- the name of the script
-    """
-
-    instructions_path = os.path.join(repo_path, ".mango", ".instructions")
-    with open(instructions_path, "r") as instructions_file:
-        for line in instructions_file:
-            if line.startswith(f"{script_name}:") or line.startswith(
-                f"*{script_name}:"
-            ):
-                return True
-    return False
-
-def existRegisteredCommand(repo_path: str, command_name: str) -> bool:
-    """determine whether a command is registered in the .instructions file.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - command_name -- the name of the command
-    """
-
-    instructions_path = os.path.join(repo_path, ".mango", ".instructions")
-    with open(instructions_path, "r") as instructions_file:
-        for line in instructions_file:
-            line = line.strip()
-            if line.startswith('#'):
-                continue
-            # fix: prone to error when there is a script whose name corresponds to a
-            # command, but the command has not been registered
-            line = line.split(":")[1].strip()
-            if command_name in line.split(" "):
-                return True
-    return False
-
-def existScript(repo_path: str, script_name: str) -> bool:
-    """determine whether a script exists in the mango repo
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - script_name -- the name of the script
-    """
-
-    return os.path.exists(os.path.join(repo_path, ".mango", script_name))
-
-def registerNewScript(repo_path: str, script_name: str) -> None:
-    """register a new script in the mango repo
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - script_name -- the name of the script to register
-    """
-
-    script_path = os.path.join(repo_path, ".mango", script_name)
-    with open(script_path, "a"):
-        pass
-    os.chmod(script_path, 0o754)
-
-    instructions_path = os.path.join(repo_path, ".mango", ".instructions")
-    with open(instructions_path, "a") as instructions_file:
-        instructions_file.write(f"{script_name}:")
-
-def bindCommandsToScript(repo_path: str, command_names: list, script_name: str) -> None:
-    """bind a list of commands to a script in the mango repo.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - command_names -- the names of the commands to bind
-    - script_name -- the name of the script to bind to the commands
-    """
-
-    instructions_path = os.path.join(repo_path, ".mango", ".instructions")
-    lines = []
-    has_appended = False
-    with open(instructions_path, "r") as instructions_file:
-        lines = instructions_file.readlines()
-
-        def processLine(line: str) -> str:
-            if line.startswith(f"{script_name}:") or line.startswith(
-                f"*{script_name}:"
-            ):
-                print(f"line: {line}", color="gray")
-                nonlocal has_appended
-                has_appended = True
-                present_commands = line.split(":")[1].strip().split(" ")
-                # this edge case happens when the list is originally empty
-                if present_commands == [""]:
-                    present_commands = []
-                print(
-                    "present_commands: {present_commands} "
-                    "command_names: {command_names}".format(
-                        present_commands=present_commands,
-                        command_names=command_names,
-                    ),
-                    color="gray"
-                )
-                new_commands = set(present_commands + command_names)
-                line = f"{script_name}: {' '.join(new_commands)}\n"
-            return line
-
-        lines = [processLine(line) for line in lines]
-
-    if not has_appended:
-        lines.append(f"{script_name}: {' '.join(command_names)}\n")
-    with open(instructions_path, "w") as instructions_file:
-        instructions_file.writelines(lines)
-
 def openInEditor(editor: str, file_path: str) -> None:
     """open a file in an editor
 
@@ -187,127 +339,3 @@ def openInEditor(editor: str, file_path: str) -> None:
     """
 
     os.system(f"{editor} {file_path}")
-
-# decorator
-def enactInstructionsList(func):
-    """enact a function on a .instruction file."""
-
-    def wrapper(*args, **kwargs):
-        instructions_path = os.path.join(
-            kwargs['repo_path'],
-            ".mango",
-            ".instructions",
-        )
-        with open(instructions_path, "r") as instructions_file:
-            lines = instructions_file.readlines()
-        lines = func(*args, **kwargs, lines=lines)
-        with open(instructions_path, "w") as instructions_file:
-            instructions_file.writelines(lines)
-
-    return wrapper
-
-@enactInstructionsList
-def dereferenceScript(repo_path: str, script_name: str, lines=None):
-    """dereference a script in the mango repo.
-
-    Removes it completely from the .instructions file.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - lines -- the lines of the .instructions file
-    - script_name -- the name of the script to dereference
-    """
-
-    if lines is None:
-        return []
-
-    prefixes = (f"{script_name}:", f"*{script_name}:")
-    return [line for line in lines if not line.startswith(prefixes)]
-
-@enactInstructionsList
-def unbindScriptAll(repo_path: str, script_name: str, lines=None):
-    """unbind a script from all commands in the mango repo.
-
-    Keeps an empty entry in the .instructions file.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - script_name -- the name of the script to unbind
-
-    The 'lines' parameter is handled by the enactInstructionsList decorator
-    """
-
-    if lines is None:
-        return []
-
-    def processLine(line: str) -> str:
-        if line.startswith(f"{script_name}:"):
-            return f"{script_name}:\n"
-        if line.startswith(f"*{script_name}:"):
-            return f"*{script_name}:\n"
-        return line
-
-    return [processLine(line) for line in lines]
-
-@enactInstructionsList
-def unbindScriptSelectively(
-    repo_path: str,
-    script_name: str,
-    command_names: list,
-    lines=None,
-):
-    """unbind a script from a list of commands in the mango repo.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - script_name -- the name of the script to unbind
-    - command_names -- the names of the commands to unbind
-
-    The 'lines' parameter is handled by the enactInstructionsList decorator
-    """
-
-    if lines is None:
-        return []
-
-    def processLine(line: str) -> str:
-        if line.startswith(f"{script_name}:"):
-            present_commands = line.split(":")[1].strip().split(" ")
-            # this edge case happens when the list is originally empty
-            if present_commands == [""]:
-                present_commands = []
-            new_commands = set(present_commands) - set(command_names)
-            return f"{script_name}: {' '.join(new_commands)}\n"
-        if line.startswith(f"*{script_name}:"):
-            present_commands = line.split(":")[1].strip().split(" ")
-            if present_commands == [""]:
-                present_commands = []
-            new_commands = set(present_commands) - set(command_names)
-            return f"*{script_name}: {' '.join(new_commands)}\n"
-        return line
-
-    return [processLine(line) for line in lines]
-
-@enactInstructionsList
-def setSourcePolicy(repo_path: str, script_name: str, use_source: bool, lines=None):
-    """set the source policy for a single script.
-
-    Updates the change in the .instructions file.
-
-    Keyword arguments:
-    - repo_path -- the path to the mango repo
-    - lines -- the lines of the .instructions file
-    - script_name -- the name of the script to dereference
-    - use_source -- the new source policy for the script
-    """
-
-    if lines is None:
-        return []
-
-    def processLine(line: str) -> str:
-        if line.startswith(f"{script_name}:") and use_source:
-            return f"*{script_name}: {line.split(':')[1]}"
-        if line.startswith(f"*{script_name}:") and not use_source:
-            return f"{script_name}: {line.split(':')[1]}"
-        return line
-
-    return [processLine(line) for line in lines]

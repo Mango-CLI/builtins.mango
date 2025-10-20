@@ -8,5 +8,8 @@
 [32m- Bind several commands in one call:[0m
         [33mmango @bind [37mscript binding_1 binding_2 binding_3[0m
 
-[32m- Rebind an already claimed command name:[0m
-        [33mmango @bind [37mscript binding --force[0m
+[32m- Rebind all commands from a submodule (also known as exporting a submodule):[0m
+        [33mmango @bind [37m--submodule submodule[0m
+
+[32m- Rebind a command from a submodule:[0m
+        [33mmango @bind [37m--submodule submodule script bindings...[0m

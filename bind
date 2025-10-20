@@ -3,50 +3,71 @@
 """
 bind
 
-usage: mango @bind [script_name] [command_name ...] (-f, --force)
+usage: mango @bind (--submodule SUBMODULE_NAME) VISIBLE_ITEM BINDINGS...
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
-It is called to bind one or more commands to a script.
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
 
-If the script does not exist, an error will be raised. If the command has been registered, an error will be raised.
-The latter can be overridden with the -f(--force) flag.
+This script binds one or more names to a specified item in the visible scope of a mango repository.
 """
 
-from _common import bindCommandsToScript, closestMangoRepo, existRegisteredCommand
-from _print_utils import print, fatal_error
+from _common import (
+    closestMangoRepo,
+    repoToBaseModulePath,
+    getRegisteredScripts,
+    exportSubmoduleBindings,
+    bindToItem,
+)
+from _tui import uiTypeSelect
+from _cprint import print
 
 import argparse
-import os
+import re
 
 def bind():
-    parser = argparse.ArgumentParser(description="bind one or more commands to a script")
-    parser.add_argument("script_name", type=str, help="the name of the script to bind commands to")
-    parser.add_argument("command_names", type=str, nargs='+', help="the command(s) to bind to this script")
-    parser.add_argument("-f", "--force", action='store_true', help="force the binding even if the command is already registered (this will create a shadowed binding)")
+    parser = argparse.ArgumentParser(description="bind commands to a visible items in a mango base module")
+    parser.add_argument("--submodule", type=str, required=False, help="export bindings from a submodule", default=None)
+    parser.add_argument("item", type=str, help="the path to the script to bind or submodule binding to rebind")
+    parser.add_argument("bindings", type=str, nargs='*', help="the new bindings given to the script item")
     args = parser.parse_args()
-    
-    # get the current repo
-    try:
-        current_repo = closestMangoRepo()
-    except FileNotFoundError:
-        fatal_error("No mango repo found.")
-    
-    # get the script path
-    script_path = os.path.join(current_repo, '.mango', args.script_name)
-    if not os.path.exists(script_path): # if the script does not exist, then create it
-        fatal_error(f"Script '{args.script_name}' does not exist. Maybe you can create it using @add?")
-    
-    # if any of the bindings have been registered in this repo, and there is no force flag, raise an error
-    if not args.force:
-        for command in args.command_names:
-            if existRegisteredCommand(current_repo, command):
-                fatal_error(f"Command '{command}' is already registered in this repo. Use -f or --force to force a shadowed binding.")
-    
-    # insert the bindings into .instructions
-    bindCommandsToScript(repo_path=current_repo, script_name=args.script_name, command_names=args.command_names)
-    
-    print(f"Bound the given commands to script '{args.script_name}'.", color="white")
 
+    submodule: str | None = args.submodule
+    item: str = args.item
+    bindings: list[str] = args.bindings
+    
+    # Validate the names of the bindings
+    for binding in bindings:
+        # Validate the binding name
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", binding):
+            print(f"Error: Invalid binding name '{binding}'. Must start with a letter or underscore and contain only letters, digits, or underscores.")
+            continue
 
-if __name__ == '__main__':
+    # Check for existing bindings
+    repo_path = closestMangoRepo()
+    mango_base_module_path = repoToBaseModulePath(repo_path)
+    existing_scripts = getRegisteredScripts(mango_base_module_path)
+    for binding in bindings:
+        for ori_script in existing_scripts:
+            if ori_script.isBoundTo(binding):
+                result = uiTypeSelect(
+                    prompt=f"Binding '{binding}' is already claimed by script '{ori_script.relativeOSPath()}'. Do you want to rebind it to '{item}'? Choose a for 'all'",
+                    options=["y", "n", "a"],
+                    default_id=0,
+                )
+                if result == 0: # y
+                    continue
+                elif result == 1: # n
+                    return
+                elif result == 2: # a
+                    break
+    
+    # Perform the binding logic: simply prepend to the first line of the script file
+    if submodule is None and item == '*':
+        if len(bindings) != 0:
+            print("Error: When binding to all items in the base module, no specific item should be provided.", color="red")
+            exit(1)
+        exportSubmoduleBindings(mango_base_module_path, bindings)
+    else:
+        bindToItem(mango_base_module_path, submodule, item, bindings)
+
+if __name__ == "__main__":
     bind()

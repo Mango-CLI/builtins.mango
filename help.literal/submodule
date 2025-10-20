@@ -1,0 +1,21 @@
+[1;37msubmodule[0m
+
+[37mManage repository submodules. Use 'mango @help submodule <subcommand>' for details on a specific subcommand.[0m
+
+[32m- Add a submodule:[0m
+        [33mmango @submodule add [37msubmodule_git | submodule_name (rename_to)[0m
+
+[32m- Remove a submodule:[0m
+        [33mmango @submodule remove [37msubmodule_name[0m
+
+[32m- Update submodules:[0m
+        [33mmango @submodule update [37m(submodule_name)[0m
+
+[32m- Register a submodule:[0m
+        [33mmango @submodule register [37m(rename_to)[0m
+
+[32m- Unregister a submodule:[0m
+        [33mmango @submodule unregister [37msubmodule_name[0m
+
+[32m- List submodules:[0m
+        [33mmango @submodule list [37m(repo_path | --registry)[0m

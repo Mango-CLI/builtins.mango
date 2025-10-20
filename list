@@ -16,8 +16,8 @@ If repo_path is not provided, the program will search from . and find the closes
 import argparse
 import os
 
-from _common import closestMangoRepo, existMangoRepo
-from _print_utils import print
+from _common import closestMangoRepo, isMangoRepo
+from _cprint import print
 
 
 def list_commands(search_starting_point):
@@ -53,7 +53,7 @@ def list_commands(search_starting_point):
             print(command, color="blue", end='')
             print('')
     
-    if not existMangoRepo(search_starting_point):
+    if not isMangoRepo(search_starting_point):
         print(
             f"{os.path.abspath(search_starting_point)} is not a mango repo. Moving up!",
             color="yellow"

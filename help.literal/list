@@ -2,8 +2,11 @@
 
 [37mShow the scripts in a mango repository along with the commands bound to each script. Searches upward from the current directory if no path is given.[0m
 
-[32m- List scripts for the current repository:[0m
+[32m- List scripts and submodules for the current repository:[0m
         [33mmango @list[0m
 
 [32m- List scripts for a repository at another path:[0m
         [33mmango @list[0m [37m~/projects/mango-demo[0m
+
+[32m- List commands and its submodules from a submodule:[0m
+        [33mmango @list[0m [37m--submodule submodule[0m

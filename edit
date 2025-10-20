@@ -5,9 +5,10 @@ edit
 
 usage: mango @edit [script_name]
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango,
-aka the home mango repo.
-It is called to edit a script in the current directory. If the script does not exist,
+This is a prebuilt script in the builtins submodule.
+It is shipped with mango and is automatically installed in the user's home mango.
+
+The script is called to edit a script in the current directory. If the script does not exist,
 an error will be raised.
 """
 
@@ -15,7 +16,7 @@ import argparse
 import os
 
 from _common import closestMangoRepo, openInEditor
-from _print_utils import fatal_error
+from _cprint import fatal_error
 
 
 def edit():

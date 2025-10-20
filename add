@@ -3,23 +3,24 @@
 """
 add
 
-usage: mango @add [script_name] (-b, --bind [command_name ...]) (--noopen)
+usage: mango @add [script_name] (-b, --bind [command_name ...]) (--noopen) (-s, --source)
 
-This is a prebuilt script and is automatically placed in /home/<usr>/.mango, aka the home mango repo.
-It is called to add or edit a command within a repo.
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
 
 If the script already exists, it will be opened in the default editor.
 """
 
 from _common import (
-    bindCommandsToScript,
+    bindToScript,
     closestMangoRepo,
     executeIfExists,
-    existRegisteredCommand,
     openInEditor,
     setSourcePolicy,
+    repoToBaseModulePath,
+    existBinding,
 )
-from _print_utils import print, fatal_error
+from _cprint import print, fatal_error
+from re import match
 
 import argparse
 import os
@@ -56,19 +57,28 @@ def add():
         executeIfExists(os.path.join(current_repo, '.mango', ".on-add"), args=[args.script_name, '' if args.bind is None else ' '.join(args.bind)])
     
     print("Editing the .instructions file", color='gray')
-    if args.bind is None and not existRegisteredCommand(current_repo, args.script_name):
+    
+    # determine the bindings
+    to_bind = None
+    if args.bind is None and not existBinding(current_repo, args.script_name):
         print(f"No bindings specified. '{args.script_name.replace(' ', '_')}' will be configured as the default command.", color='yellow')
-        to_bind = [args.script_name.replace(' ', '_')]
+        to_bind: None | list[str] = [args.script_name.replace(' ', '_')]
     else:
-        to_bind = args.bind
+        to_bind: None | list[str] = args.bind
+    
+    # check bindings naming
+    if to_bind is not None:
+        for to_bind_element in to_bind:
+            if not match(r'^[a-zA-Z0-9\-_]+$', to_bind_element):
+                fatal_error(f"Invalid command name '{to_bind_element}'. Command names can only contain a-z, A-Z, 0-9, hyphens, and underscores.")
     
     # if any of the bindings have been registered in this repo, raise an error
     if to_bind is not None:
-        for command in to_bind:
-            if existRegisteredCommand(current_repo, command):
-                fatal_error(f"Command '{command}' is already registered in this repo. Please unbind it first.")
+        for to_bind_element in to_bind:
+            if existBinding(current_repo, to_bind_element):
+                fatal_error(f"Command '{to_bind_element}' is already registered in this repo. Please unbind it first.")
         # insert the bindings into .instructions
-        bindCommandsToScript(repo_path=current_repo, script_name=args.script_name, command_names=to_bind)
+        bindToScript(mango_module_path=repoToBaseModulePath(current_repo), script_name=args.script_name, bindings=to_bind)
     
     setSourcePolicy(repo_path=current_repo, script_name=args.script_name, use_source=args.source)
 

@@ -21,7 +21,7 @@ import argparse
 import os
 
 from _common import closestMangoRepo
-from _print_utils import print, enact_ansi, fatal_error
+from _cprint import print, enact_ansi, fatal_error
 
 
 def get_help_file_path():
