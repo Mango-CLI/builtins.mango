@@ -22,10 +22,10 @@ class ScriptInfo:
         Return: the relative OS path of the script to the base mango module.
         """
 
-        submodule_os_path = virtualToRelativePath(":".join(self.virtual_submodule_path))
+        submodule_os_path = mapSubmodulePath(":".join(self.virtual_submodule_path))
         return os.path.join(submodule_os_path, self.within_submodule_path)
     
-    def absoluteOSPath(self, base_module_path: str) -> str:
+    def absoluteOSPath(self, base_mango_folder: str) -> str:
         """get the absolute OS path of the script in the mango repo.
 
         Keyword arguments:
@@ -34,7 +34,7 @@ class ScriptInfo:
         Return: the absolute OS path of the script in the mango repo
         """
 
-        return os.path.join(base_module_path, self.relativeOSPath())
+        return os.path.join(base_mango_folder, self.relativeOSPath())
     
     def isBoundTo(self, binding: str) -> bool:
         """check whether the script is bound to a command.
@@ -61,17 +61,6 @@ def isMangoRepo(path_str: str) -> bool:
 
     return os.path.exists(os.path.join(path_str, ".mango"))
 
-def isMangoModule(path_str: str) -> bool:
-    """check whether a directory is a mango module.
-
-    Keyword arguments:
-    - path_str -- the string of the directory to check
-
-    Return: bool for whether the directory is a mango module
-    """
-
-    return os.path.exists(os.path.join(path_str, ".instructions"))
-
 def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
     """find the first mango repo up the directory tree.
 
@@ -87,36 +76,38 @@ def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
         cur_exec_path_str = os.path.dirname(cur_exec_path_str)
     raise FileNotFoundError("mango repo not found")
 
-def repoToBaseModulePath(repo_path: str) -> str:
-    """convert a mango repo path to its base module path.
-
-    raises a ValueError if the path is not a mango repo.
+def mangoFolderOf(repo: str) -> str:
+    """get the mango folder path of a mango repo.
 
     Keyword arguments:
-    - repo_path -- the path to the mango repo
+    - repo -- the path to the mango repo
 
-    Return: the base module path of the mango repo
+    Return: the path to the mango folder within the repo
     """
 
-    abs_repo_path = os.path.abspath(repo_path)
-    if not isMangoRepo(abs_repo_path):
-        raise ValueError(f"{repo_path} is not a mango repo")
-    return os.path.join(abs_repo_path, ".mango")
+    return os.path.join(repo, ".mango")
 
-def virtualToRelativePath(virtual_submodule_path: str) -> str:
-    """convert a mango submodule path to an OS path.
-
+def mapSubmodulePath(submodule_virtual_path: str, base_path: str = ".", absolute: bool = False) -> str:
+    """maps a submodule's mango folder path to its real os path
+    
     Keyword arguments:
-    - virtual_path -- the virtual path to convert
-
-    Return: the OS path of the mango submodule path
+    - submodule_virtual_path -- the submodule path to map
+    - base_path -- base directory used to resolve the submodule path
+    Return: the real os path of the submodule, relative to the base path
     """
-
-    segments = virtual_submodule_path.split(":")
-    ret = "."
-    for segment in segments:
-        ret = os.path.join(ret, '.submodules', segment)
-    return ret
+    
+    relative_path = "."
+    if not submodule_virtual_path:
+        return base_path if absolute else relative_path
+    for submodule in submodule_virtual_path.split(':'):
+        relative_path = os.path.join(relative_path, ".submodules", submodule, ".mango")
+    absolute_os_path = os.path.join(base_path, relative_path)
+    if not os.path.exists(absolute_os_path):
+        raise FileNotFoundError("submodule path does not exist")
+    if absolute:
+        return absolute_os_path
+    else:
+        return relative_path
 
 def getBindingsForLine(line: str) -> list[str]:
     """get the bindings from a line in the .instructions file.
@@ -131,16 +122,16 @@ def getBindingsForLine(line: str) -> list[str]:
         return []
     return line.split(":")[1].strip().split()
 
-def getRegisteredScripts(mango_module_path: str, starting_submodule: list[str] = []) -> list[ScriptInfo]:
+def getRegisteredScripts(mango_folder_path: str, starting_submodule: list[str] = []) -> list[ScriptInfo]:
     """get a list of registered scripts in the mango repo.
 
     Keyword arguments:
-    - mango_module_path -- the path to the mango module
+    - mango_folder_path -- the path to the mango module
 
     Return: a list of ScriptInfo objects representing the registered scripts
     """
 
-    instructions_path = os.path.join(mango_module_path, ".instructions")
+    instructions_path = os.path.join(mango_folder_path, ".instructions")
     scripts = []
     with open(instructions_path, "r") as instructions_file:
         for line in instructions_file:
@@ -155,7 +146,7 @@ def getRegisteredScripts(mango_module_path: str, starting_submodule: list[str] =
                 remaining = line[line.index("]") + 1 :].strip()
                 submodule_registry = getRegisteredScripts(
                     os.path.join(
-                        mango_module_path,
+                        mango_folder_path,
                         ".submodules",
                         submodule_name,
                     ),
@@ -185,25 +176,25 @@ def getRegisteredScripts(mango_module_path: str, starting_submodule: list[str] =
             ))
     return scripts
 
-def existScript(mango_module_path: str, script_name: str) -> bool:
+def existScript(mango_folder_path: str, script_name: str) -> bool:
     """determine whether a script exists in the mango repo
 
     Keyword arguments:
-    - mango_module_path -- the path to the mango module
+    - mango_folder_path -- the path to the mango folder
     - script_name -- the name of the script
     """
 
-    return os.path.exists(os.path.join(mango_module_path, ".mango", script_name))
+    return os.path.exists(os.path.join(mango_folder_path, ".mango", script_name))
 
-def existBinding(mango_module_path: str, command_name: str) -> bool:
+def existBinding(mango_folder_path: str, command_name: str) -> bool:
     """determine whether a command binding exists in the mango repo
 
     Keyword arguments:
-    - mango_module_path -- the path to the mango module
+    - mango_folder_path -- the path to the mango folder
     - command_name -- the name of the command
     """
 
-    registered_scripts = getRegisteredScripts(mango_module_path)
+    registered_scripts = getRegisteredScripts(mango_folder_path)
     for script in registered_scripts:
         if script.isBoundTo(command_name):
             return True
@@ -217,7 +208,7 @@ def enactInstructionsList(func: Callable) -> Callable:
 
     def wrapper(*args, **kwargs):
         instructions_path = os.path.join(
-            kwargs['mango_module_path'],
+            kwargs['mango_folder_path'],
             ".instructions",
         )
         with open(instructions_path, "r") as instructions_file:
@@ -229,13 +220,13 @@ def enactInstructionsList(func: Callable) -> Callable:
     return wrapper
 
 @enactInstructionsList
-def setSourcePolicy(mango_module_path: str, script_name: str, use_source: bool, lines: list[str] | None = None):
+def setSourcePolicy(mango_folder_path: str, script_name: str, use_source: bool, lines: list[str] | None = None):
     """set the source policy for a single script.
 
     Updates the change in the .instructions file.
 
     Keyword arguments:
-    - mango_module_path -- the path to the mango repo
+    - mango_folder_path -- the path to the mango repo
     - lines -- the lines of the .instructions file
     - script_name -- the name of the script to dereference
     - use_source -- the new source policy for the script
@@ -254,11 +245,11 @@ def setSourcePolicy(mango_module_path: str, script_name: str, use_source: bool, 
     return [processLine(line) for line in lines]
 
 @enactInstructionsList
-def bindToItem(mango_module_path: str, submodule: str | None, item: str, bindings: list, lines: list[str] | None = None):
+def bindToItem(mango_folder_path: str, submodule: str | None, item: str, bindings: list, lines: list[str] | None = None):
     """bind a list of commands to a script-like
     
     Keyword arguments:
-    - mango_module_path -- the path to the mango repo
+    - mango_folder_path -- the path to the mango repo
     - script_like -- the name of the script or submodule binding to bind to
     - bindings -- the names of the commands to bind
     - submodule -- the submodule to bind from (if any)
@@ -273,11 +264,11 @@ def bindToItem(mango_module_path: str, submodule: str | None, item: str, binding
     return lines
 
 @enactInstructionsList
-def exportSubmoduleBindings(mango_module_path: str, submodule: str, lines: list[str] | None = None):
+def exportSubmoduleBindings(mango_folder_path: str, submodule: str, lines: list[str] | None = None):
     """export bindings from a submodule.
 
     Keyword arguments:
-    - mango_module_path -- the path to the mango repo
+    - mango_folder_path -- the path to the mango repo
     - submodule -- the name of the submodule to export from
     - bindings -- the names of the commands to export
     """
