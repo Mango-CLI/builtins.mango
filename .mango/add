@@ -11,7 +11,6 @@ If the script already exists, it will be opened in the default editor.
 """
 
 from _common import (
-    mangoFolderOf,
     bindToItem,
     closestMangoRepo,
     executeIfExists,
@@ -78,9 +77,9 @@ def add():
             if existBinding(current_repo, to_bind_element):
                 fatal_error(f"Command '{to_bind_element}' is already registered in this repo. Please unbind it first.")
         # insert the bindings into .instructions
-        bindToItem(mango_folder_path=mangoFolderOf(current_repo), script_name=args.script_name, bindings=to_bind)
-
-    setSourcePolicy(mango_folder_path=mangoFolderOf(current_repo), script_name=args.script_name, use_source=args.source)
+        bindToItem(mango_repo_path=current_repo, script_name=args.script_name, bindings=to_bind)
+    # set the source policy
+    setSourcePolicy(mango_repo_path=current_repo, script_name=args.script_name, use_source=args.source)
 
     # open the script in the default editor
     if not args.noopen:
