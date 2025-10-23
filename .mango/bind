@@ -12,7 +12,6 @@ This script binds one or more names to a specified item in the visible scope of 
 
 from _common import (
     closestMangoRepo,
-    mangoFolderOf,
     getRegisteredItems,
     exportSubmoduleBindings,
     bindToItem,
@@ -43,8 +42,7 @@ def bind():
 
     # Check for existing bindings
     repo_path = closestMangoRepo()
-    mango_base_module_path = mangoFolderOf(repo_path)
-    existing_scripts = getRegisteredItems(mango_base_module_path)
+    existing_scripts = getRegisteredItems(repo_path)
     for binding in bindings:
         for ori_script in existing_scripts:
             if ori_script.isBoundTo(binding):
@@ -65,9 +63,9 @@ def bind():
         if len(bindings) != 0:
             print("Error: When binding to all items in the base module, no specific item should be provided.", color="red")
             exit(1)
-        exportSubmoduleBindings(mango_base_module_path, bindings)
+        exportSubmoduleBindings(repo_path, bindings)
     else:
-        bindToItem(mango_base_module_path, submodule, item, bindings)
+        bindToItem(repo_path, submodule, item, bindings)
 
 if __name__ == "__main__":
     bind()
