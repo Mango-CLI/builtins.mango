@@ -22,7 +22,7 @@ class ScriptInfo:
         Return: the relative OS path of the script to the base mango module.
         """
 
-        submodule_os_path = mapSubmodulePath(":".join(self.virtual_submodule_path))
+        submodule_os_path = mapSubmodulePath(":".join(self.virtual_submodule_path), base_path=".")
         return os.path.join(submodule_os_path, self.within_submodule_path)
     
     def absoluteOSPath(self, base_mango_repo: str) -> str:
@@ -34,7 +34,7 @@ class ScriptInfo:
         Return: the absolute OS path of the script in the mango repo
         """
 
-        return os.path.join(base_mango_repo, self.relativeOSPath())
+        return os.path.abspath(os.path.join(base_mango_repo, self.relativeOSPath()))
     
     def name(self) -> str:
         """get the name of the script.
@@ -84,7 +84,7 @@ def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
         cur_exec_path_str = os.path.dirname(cur_exec_path_str)
     raise FileNotFoundError("mango repo not found")
 
-def mapSubmodulePath(submodule_virtual_path: str, base_path: str = ".", absolute: bool = False) -> str:
+def mapSubmodulePath(submodule_virtual_path: str , base_path: str) -> str:
     """maps a submodule's mango folder path to its real os path
     
     Keyword arguments:
@@ -93,18 +93,10 @@ def mapSubmodulePath(submodule_virtual_path: str, base_path: str = ".", absolute
     Return: the real os path of the submodule, relative to the base path
     """
     
-    relative_path = "."
-    if not submodule_virtual_path:
-        return base_path if absolute else relative_path
+    path = base_path
     for submodule in submodule_virtual_path.split(':'):
-        relative_path = os.path.join(relative_path, ".mango", ".submodules", submodule)
-    absolute_os_path = os.path.join(base_path, relative_path)
-    if not os.path.exists(absolute_os_path):
-        raise FileNotFoundError("submodule path does not exist")
-    if absolute:
-        return absolute_os_path
-    else:
-        return relative_path
+        path = os.path.join(path, ".mango", ".submodules", submodule)
+    return path
 
 def getBindingsForLine(line: str) -> list[str]:
     """get the bindings from a line in the .instructions file.
@@ -198,6 +190,56 @@ def existBinding(mango_repo_path: str, command_name: str) -> bool:
             return True
     return False
 
+def existSubmodule(mango_repo_path: str, submodule_name: str) -> bool:
+    """determine whether a submodule exists in the mango repo
+
+    Keyword arguments:
+    - mango_repo_path -- the path to the mango repo
+    - submodule_name -- the name of the submodule
+    """
+
+    submodule_path = os.path.join(mango_repo_path, ".mango", ".submodules", submodule_name)
+    return os.path.exists(submodule_path)
+
+def buildEmptyMangoRepo(repo_path: str):
+    """build an empty mango repository structure.
+
+    Keyword arguments:
+    - repo_path -- the path to the mango repo
+    """
+    
+    from _cprint import fatal_error, print
+    
+    # Convert to absolute path
+    repo_path = os.path.abspath(repo_path)
+    
+    # Check if the directory exists
+    if not os.path.exists(repo_path):
+        os.makedirs(repo_path, exist_ok=True)
+    
+    # Check if it's already a mango repo
+    if isMangoRepo(repo_path):
+        fatal_error(f"Directory {repo_path} is already a mango repository.")
+    
+    # Create the basic structure
+    mango_dir = os.path.join(repo_path, ".mango")
+    os.makedirs(mango_dir, exist_ok=True)
+    try:
+        # Create .instructions file
+        instructions_path = os.path.join(mango_dir, ".instructions")
+        with open(instructions_path, 'w') as f:
+            f.write("# Mango repository instructions\n")
+            f.write("# Add your script bindings here\n")
+        print("Created .instructions file", color='gray')
+    except OSError as e:
+        fatal_error(f"Failed to create mango repository structure: {e}")
+
+def installSubmodule(repo_path: str, git_path: str):
+    """Install a submodule from a git repository."""
+    submodule_name = os.path.basename(git_path)
+    os.makedirs(os.path.join(repo_path, ".mango", ".submodules"), exist_ok=True)
+    os.system(f"cd {os.path.join(repo_path, '.mango', '.submodules')} && git clone {git_path} --recurse-submodules")
+    executeIfExists(os.path.join(repo_path, '.mango', '.submodules', submodule_name, '.on-install'), args=[repo_path])
 
 #: Instructions Handlers
 
@@ -329,3 +371,18 @@ def openInEditor(editor: str, file_path: str) -> None:
     """
 
     os.system(f"{editor} {file_path}")
+
+def homeFolder() -> str:
+    import getpass
+    return f"/home/{getpass.getuser()}"
+
+def globPath(paths: list[str], name: str) -> str | None:
+    for path in paths:
+        if os.path.exists(os.path.join(path, name)):
+            return os.path.join(path, name)
+    return None
+
+def retrievePathFromEnv(var: str, default: list[str] = []):
+    envResult = os.environ.get(var)
+    envList = envResult.split(':') if envResult is not None else []
+    return list(filter(lambda x: len(x) > 0, envList + default))

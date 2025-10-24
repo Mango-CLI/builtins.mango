@@ -27,6 +27,21 @@ RESET = "[0m"
 
 original_print = builtins.print
 
+def color(text, color_name: str) -> str:
+    """
+    Wrap the given text with ANSI color codes.
+
+    Args:
+        text (str): The text to color
+        color_name (str): The color name (red, green, yellow, etc.)
+
+    Returns:
+        str: The colored text
+    """
+    if color_name in COLORS:
+        return f"{COLORS[color_name]}{text}{RESET}"
+    return text
+
 def print(*args, color=None, bold=False, underlined=False, **kwargs):
     """
     Custom print function that supports colored output.
