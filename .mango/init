@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+"""
+init
+
+usage: mango @init [directory_path] (--template [template_name|git_url])
+
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
+
+The script is called to initialize a new mango repository. It creates a .mango directory with the necessary structure.
+"""
+
+import argparse
+import os
+
+from _common import (
+    buildEmptyMangoRepo,
+)
+from _cprint import print, fatal_error, color
+
+
+def create_mango_repo(repo_path: str, template: str | None = None):
+    """Create a new mango repository at the specified path.
+    
+    Keyword arguments:
+    - repo_path -- the path where the mango repo should be created
+    - template -- the template to use (optional)
+    """
+    
+    buildEmptyMangoRepo(repo_path)
+    
+    # Handle template if specified
+    if template:
+        handle_template(repo_path, template)
+
+
+def handle_template(repo_path: str, template: str):
+    """Handle template initialization.
+    
+    Keyword arguments:
+    - repo_path -- the path to the mango repo
+    - template -- the template name or git URL
+    """
+    from _common import retrievePathFromEnv, homeFolder, globPath, installSubmodule
+    
+    # Check if template is a git URL
+    if not template.startswith(('http://', 'https://', 'git@')):
+        template_path = retrievePathFromEnv('MANGO_TEMPLATE_PATH', default=[
+            os.path.join(homeFolder(), '.mango', '.templates.registry'),
+            os.path.join(homeFolder(), '.mango', 'builtins', ".templates.registry")
+        ])
+        template_git = globPath(paths=template_path, name=template)
+        if template_git is None:
+            print("Template paths searched:", color='gray')
+            for path in template_path:
+                print(" - " + color(path, 'gray'))
+            fatal_error(f"Template '{color(template, 'white')}' not found in template paths.")
+    else:
+        template_git = template
+    installSubmodule(repo_path, template_git)
+
+
+def init():
+    """The main function for the init script."""
+    
+    # Parse the arguments
+    parser = argparse.ArgumentParser(description="initialize a new mango repository")
+    parser.add_argument(
+        "directory_path",
+        type=str,
+        nargs='?',
+        default='.',
+        help="the directory path where to initialize the mango repo (defaults to current directory)"
+    )
+    parser.add_argument(
+        "--template",
+        type=str,
+        help="the template to use for initialization (can be a template name or git URL)"
+    )
+    args = parser.parse_args()
+    
+    # Create the mango repository
+    create_mango_repo(args.directory_path, args.template)
+    
+    print("Mango repository initialized successfully!", color='green')
+
+
+if __name__ == '__main__':
+    init()

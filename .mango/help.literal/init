@@ -10,3 +10,4 @@
 
 [32m- Initialize with a specific template:[0m
         [33mmango @init[0m [37m~/projects/mango-demo --template python[0m
+        [33mmango @init[0m [37m~/projects/mango-demo --template https://github.com/user/repo.git[0m

@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+
+"""
+which
+
+usage: mango @which [binding]
+
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
+
+Show which script a command is bound to, or show all commands bound to a script.
+"""
+
+from _common import (
+    closestMangoRepo,
+    getRegisteredItems,
+    existBinding,
+    ScriptInfo,
+)
+from _cprint import (
+    print,
+    fatal_error, 
+    color,
+)
+
+import argparse
+import os
+
+def none_found(binding: str):
+    print(f"No script found for binding: {color(binding, 'white')}", color="yellow")
+
+def display_script(script: ScriptInfo, shadowed: bool):
+    relative_path = script.relativeOSPath()
+    relative_path = '@' + relative_path.removeprefix('./.mango')
+    print(script.name(), color="gray" if shadowed else "yellow", end='\t')
+    print(relative_path, color="gray" if shadowed else "cyan", end=f'{" (shadowed)" if shadowed else ""}\n')
+
+def which():
+    parser = argparse.ArgumentParser(description="show which script a command is bound to, or show the active mango repository")
+    parser.add_argument("binding", type=str, nargs='?', help="the binding to find the script for (optional)")
+    args = parser.parse_args()
+    
+    binding: str | None = args.binding
+    
+    # Get the current repo
+    try:
+        current_repo = closestMangoRepo()
+    except FileNotFoundError:
+        fatal_error("No mango repo found.")
+    
+    # If no binding is provided, show the active mango repository path
+    if binding is None:
+        print("Active mango repo:", color="white", end=' ')
+        print(current_repo, color="green")
+        return
+    
+    recursive_search = binding.startswith('@')
+    binding_name = binding.lstrip('@')
+    while current_repo != '/':
+        # Check if the binding exists
+        if not existBinding(current_repo, binding_name):
+            if recursive_search:
+                # Move to parent directory and continue searching
+                current_repo = os.path.abspath(os.path.join(current_repo, '..'))
+                continue
+            else:
+                none_found(binding)
+                return
+        
+        # Find which script the binding is bound to
+        registered_scripts = getRegisteredItems(current_repo)
+        found_scripts: list[ScriptInfo] = []
+        
+        for script in registered_scripts:
+            if script.isBoundTo(binding_name):
+                found_scripts.append(script)
+        assert(len(found_scripts) > 0)
+        
+        # Display the results
+        print(f"Corresponding mango repo: {color(current_repo, 'green')}", color="white")
+        primary = found_scripts[0]
+        display_script(primary, shadowed=False)
+        for shadowed_script in found_scripts[1:]:
+            display_script(shadowed_script, shadowed=True)
+        return
+
+if __name__ == "__main__":
+    which()

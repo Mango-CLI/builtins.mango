@@ -16,7 +16,7 @@ If repo_path is not provided, the program will search from . and find the closes
 import argparse
 import os
 
-from _common import closestMangoRepo, isMangoRepo, getRegisteredItems
+from _common import closestMangoRepo, isMangoRepo, getRegisteredItems, existSubmodule
 from _cprint import print
 
 
@@ -37,15 +37,14 @@ def get_active_repo(search_starting_point) -> str:
 
 def get_submodule_path(repo_path: str, submodule: str) -> str:
     """Get the path to a submodule in a mango repo"""
-    # submodule_path = os.path.join(repo_path, '.mango', '.submodules', submodule)
-    try:
-        from _common import mapSubmodulePath
-        submodule_path = mapSubmodulePath(submodule, base_path=repo_path, absolute=True)
-        return submodule_path
-    except FileNotFoundError:
+    
+    if not existSubmodule(repo_path, submodule):
         print(f"Submodule {submodule} does not exist in repo {repo_path}! Exiting...", color="red")
         exit(1)
-
+    
+    from _common import mapSubmodulePath
+    submodule_path = mapSubmodulePath(submodule, base_path=repo_path)
+    return submodule_path
 
 def list_commands(repo_path: str):
     """List all commands in a mango repo"""

@@ -77,7 +77,7 @@ def add():
             if existBinding(current_repo, to_bind_element):
                 fatal_error(f"Command '{to_bind_element}' is already registered in this repo. Please unbind it first.")
         # insert the bindings into .instructions
-        bindToItem(mango_repo_path=current_repo, script_name=args.script_name, bindings=to_bind)
+        bindToItem(mango_repo_path=current_repo, submodule=None, item=args.script_name, bindings=to_bind)
     # set the source policy
     setSourcePolicy(mango_repo_path=current_repo, script_name=args.script_name, use_source=args.source)
 

@@ -65,7 +65,7 @@ def bind():
             exit(1)
         exportSubmoduleBindings(repo_path, bindings)
     else:
-        bindToItem(repo_path, submodule, item, bindings)
+        bindToItem(mango_repo_path=repo_path, submodule=submodule, item=item, bindings=bindings)
 
 if __name__ == "__main__":
     bind()
