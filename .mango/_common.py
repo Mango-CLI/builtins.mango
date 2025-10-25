@@ -275,19 +275,52 @@ def installSubmodule(repo_path: str, git_path: str):
 def enactInstructionsList(func: Callable) -> Callable:
     """enact a function on a .instruction file."""
 
+    import functools
+    import inspect
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        # Bind the provided arguments to the original function's signature
+        # This allows us to find 'mango_repo_path' whether it's positional or keyword
+        sig = inspect.signature(func)
+        bound_args = sig.bind(*args, **kwargs)
+        bound_args.apply_defaults()
+
+        mango_repo_path = bound_args.arguments['mango_repo_path']
+
         instructions_path = os.path.join(
-            kwargs['mango_repo_path'],
+            mango_repo_path,
             ".mango",
             ".instructions",
         )
         with open(instructions_path, "r") as instructions_file:
             lines = instructions_file.readlines()
+
+        # Call the original function with its arguments, adding 'lines'
         lines = func(*args, **kwargs, lines=lines)
+
         with open(instructions_path, "w") as instructions_file:
             instructions_file.writelines(lines)
 
     return wrapper
+
+def appendToTop(original: list[str], to_add: list[str]) -> list[str]:
+    """append lines to the top of a list of lines, skipping empty lines and comment sections.
+
+    Keyword arguments:
+    - original -- the original list of lines
+    - to_add -- the lines to add to the top
+
+    Return: the new list of lines with the added lines at the top
+    """
+
+    insert_index = 0
+    for idx, line in enumerate(original):
+        stripped_line = line.strip()
+        if stripped_line == "" or stripped_line.startswith("#"):
+            insert_index += 1
+        else:
+            break
+    return original[:insert_index] + to_add + original[insert_index:]
 
 @enactInstructionsList
 def setSourcePolicy(mango_repo_path: str, script_name: str, use_source: bool, lines: list[str] | None = None):
@@ -330,7 +363,7 @@ def bindToItem(mango_repo_path: str, submodule: str | None, item: str, bindings:
 
     submodule_prefix = "" if submodule is None else f"[{submodule}] "
     line = f"{submodule_prefix}{item}: {' '.join(bindings)}\n"
-    lines = [line] + lines
+    lines = appendToTop(lines, to_add=[line])
     return lines
 
 @enactInstructionsList
@@ -346,9 +379,9 @@ def exportSubmoduleBindings(mango_repo_path: str, submodule: str, lines: list[st
     if lines is None:
         return []
 
-    submodule_prefix = f"[{submodule}] "
+    submodule_prefix = f"[{submodule}]"
     line = f"{submodule_prefix} *\n"
-    lines = [line] + lines
+    lines = appendToTop(lines, to_add=[line])
     return lines
 
 @enactInstructionsList

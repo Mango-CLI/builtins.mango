@@ -3,11 +3,13 @@
 """
 bind
 
-usage: mango @bind (--submodule SUBMODULE_NAME) VISIBLE_ITEM BINDINGS...
+usage: mango @bind (--submodule SUBMODULE_NAME) (VISIBLE_ITEM) BINDINGS...
 
 This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
 
 This script binds one or more names to a specified item in the visible scope of a mango repository.
+
+If only the submodule is provided, it will export all bindings from that submodule to the active mango repository.
 """
 
 from _common import (
@@ -15,6 +17,7 @@ from _common import (
     getRegisteredItems,
     exportSubmoduleBindings,
     bindToItem,
+    existSubmodule,
 )
 from _tui import uiTypeSelect
 from _cprint import print
@@ -25,13 +28,17 @@ import re
 def bind():
     parser = argparse.ArgumentParser(description="Bind commands to visible items in the active mango repository")
     parser.add_argument("--submodule", type=str, required=False, help="export bindings from a submodule", default=None)
-    parser.add_argument("item", type=str, help="the path to the script to bind or submodule binding to rebind")
+    parser.add_argument("item", type=str, nargs='?', help="the path to the script to bind or submodule binding to rebind")
     parser.add_argument("bindings", type=str, nargs='*', help="the new bindings given to the script item")
     args = parser.parse_args()
 
     submodule: str | None = args.submodule
-    item: str = args.item
+    item: str | None = args.item
     bindings: list[str] = args.bindings
+    
+    if submodule is None and item is None:
+        print("Error: You must provide either a submodule to export bindings from or an item to bind to.", color="red")
+        exit(1)
     
     # Validate the names of the bindings
     for binding in bindings:
@@ -58,12 +65,17 @@ def bind():
                 elif result == 2: # a
                     break
     
+    # Validate that the submodule actually exists
+    if submodule and not existSubmodule(repo_path, submodule):
+        print(f"Error: Submodule '{submodule}' does not exist in the mango repository.", color="red")
+        exit(1)
+    
     # Perform the binding logic: simply prepend to the first line of the script file
-    if submodule is None and item == '*':
+    if submodule is not None and item is None:
         if len(bindings) != 0:
             print("Error: When binding to all items in the active mango repository, no specific item should be provided.", color="red")
             exit(1)
-        exportSubmoduleBindings(repo_path, bindings)
+        exportSubmoduleBindings(repo_path, submodule)
     else:
         bindToItem(mango_repo_path=repo_path, submodule=submodule, item=item, bindings=bindings)
 
