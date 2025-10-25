@@ -3,13 +3,13 @@
 [37mCreate or reopen a script in the current mango repository, binding commands or enabling source mode as needed. Existing scripts are never overwritten, only reopened.[0m
 
 [32m- Create a script and open it in your configured editor:[0m
-    [33mmango @add [37mscript[0m
+        [33mmango @add [37mscript[0m
 
 [32m- Bind new command names while creating the script:[0m
-    [33mmango @add [37mscript -b binding_1 binding_2[0m
+        [33mmango @add [37mscript -b binding_1 binding_2[0m
 
 [32m- Enable source mode (script runs in the current shell):[0m
-    [33mmango @add [37mscript -s[0m
+        [33mmango @add [37mscript -s[0m
 
 [32m- Skip opening the editor after scaffolding the script:[0m
-    [33mmango @add [37mscript --noopen[0m
+        [33mmango @add [37mscript --noopen[0m

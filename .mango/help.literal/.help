@@ -11,7 +11,7 @@
 
 [32m- View scripts and their bound commands:[0m
   [0;33mmango @list[0m [0;37m(repo_path)[0m
-  [0;33mmango @which[0m [0;37mbinding | @binding[0m
+  [0;33mmango @which[0m [0;37m(binding | @binding)[0m
 
 [32m- Manage scripts and their bindings:[0m
   [0;33mmango @add[0m [0;37mscript (-b, --bind bindings...) (-s, --source) (--noopen)[0m
@@ -32,7 +32,7 @@
   [0;33mmango @template init[0m [0;37m(template_name | template_git)[0m
   [0;33mmango @template register[0m [0;37m(rename_to)[0m
   [0;33mmango @template unregister[0m [0;37mtemplate_name[0m
-  [0;33mmango @template list[0m [0;37m(--registry)[0m
+  [0;33mmango @template list[0m
 
 [32m- Show this overview or a detailed help page:[0m
   [0;33mmango @help[0m [0;37m(command_name)[0m
