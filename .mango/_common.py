@@ -17,21 +17,21 @@ class ScriptInfo:
     bindings: list[str]
     
     def relativeOSPath(self) -> str:
-        """get the relative OS path of the script to the base mango module.
+        """get the relative OS path of the script to the active mango repository.
 
-        Return: the relative OS path of the script to the base mango module.
+        Return: the relative OS path of the script to the active mango repository.
         """
 
         submodule_os_path = mapSubmodulePath(":".join(self.virtual_submodule_path), base_path=".")
         return os.path.join(submodule_os_path, self.within_submodule_path)
     
     def absoluteOSPath(self, base_mango_repo: str) -> str:
-        """get the absolute OS path of the script in the mango repo.
+        """get the absolute OS path of the script in the mango repository.
 
         Keyword arguments:
-        - base_module_path -- the path to the base mango module
+        - base_module_path -- the path to the active mango repository
 
-        Return: the absolute OS path of the script in the mango repo
+        Return: the absolute OS path of the script in the mango repository
         """
 
         return os.path.abspath(os.path.join(base_mango_repo, self.relativeOSPath()))
@@ -59,22 +59,22 @@ class ScriptInfo:
 #: Common Utility Functions for Mango
 
 def isMangoRepo(path_str: str) -> bool:
-    """check whether a directory is a mango repo.
+    """check whether a directory is a mango repository.
 
     Keyword arguments:
     - path_str -- the string of the directory to check
 
-    Return: bool for whether the directory is a mango repo
+    Return: bool for whether the directory is a mango repository
     """
 
     return os.path.exists(os.path.join(path_str, ".mango"))
 
 def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
-    """find the first mango repo up the directory tree.
+    """find the first mango repository up the directory tree.
 
     raises a FileNotFoundError if none is found.
 
-    Return: string for the path of the closest mango repo
+    Return: string for the path of the closest mango repository
     """
 
     cur_exec_path_str = starting_dir
@@ -112,10 +112,10 @@ def getBindingsForLine(line: str) -> list[str]:
     return line.split(":")[1].strip().split()
 
 def getRegisteredItems(mango_repo_path: str, starting_submodule: list[str] = []) -> list[ScriptInfo]:
-    """get a list of registered scripts in the mango repo.
+    """get a list of registered scripts in the mango repository.
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
 
     Return: a list of ScriptInfo objects representing the registered scripts
     """
@@ -167,20 +167,20 @@ def getRegisteredItems(mango_repo_path: str, starting_submodule: list[str] = [])
     return scripts
 
 def existScript(mango_repo_path: str, script_name: str) -> bool:
-    """determine whether a script exists in the mango repo
+    """determine whether a script exists in the mango repository
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - script_name -- the name of the script
     """
 
     return os.path.exists(os.path.join(mango_repo_path, ".mango", script_name))
 
 def existBinding(mango_repo_path: str, command_name: str) -> bool:
-    """determine whether a command binding exists in the mango repo
+    """determine whether a command binding exists in the mango repository
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - command_name -- the name of the command
     """
 
@@ -191,10 +191,10 @@ def existBinding(mango_repo_path: str, command_name: str) -> bool:
     return False
 
 def existSubmodule(mango_repo_path: str, submodule_name: str) -> bool:
-    """determine whether a submodule exists in the mango repo
+    """determine whether a submodule exists in the mango repository
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - submodule_name -- the name of the submodule
     """
 
@@ -205,7 +205,7 @@ def buildEmptyMangoRepo(repo_path: str):
     """build an empty mango repository structure.
 
     Keyword arguments:
-    - repo_path -- the path to the mango repo
+    - repo_path -- the path to the mango repository
     """
     
     from _cprint import fatal_error, print
@@ -217,7 +217,7 @@ def buildEmptyMangoRepo(repo_path: str):
     if not os.path.exists(repo_path):
         os.makedirs(repo_path, exist_ok=True)
     
-    # Check if it's already a mango repo
+    # Check if it's already a mango repository
     if isMangoRepo(repo_path):
         fatal_error(f"Directory {repo_path} is already a mango repository.")
     
@@ -267,7 +267,7 @@ def setSourcePolicy(mango_repo_path: str, script_name: str, use_source: bool, li
     Updates the change in the .instructions file.
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - lines -- the lines of the .instructions file
     - script_name -- the name of the script to dereference
     - use_source -- the new source policy for the script
@@ -290,7 +290,7 @@ def bindToItem(mango_repo_path: str, submodule: str | None, item: str, bindings:
     """bind a list of commands to a script-like
     
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - script_like -- the name of the script or submodule binding to bind to
     - bindings -- the names of the commands to bind
     - submodule -- the submodule to bind from (if any)
@@ -309,7 +309,7 @@ def exportSubmoduleBindings(mango_repo_path: str, submodule: str, lines: list[st
     """export bindings from a submodule.
 
     Keyword arguments:
-    - mango_repo_path -- the path to the mango repo
+    - mango_repo_path -- the path to the mango repository
     - submodule -- the name of the submodule to export from
     - bindings -- the names of the commands to export
     """

@@ -6,7 +6,7 @@ help
 usage: mango @help (command_name)
 
 This is a prebuilt script and is automatically placed in /home/<usr>/.mango,
-aka the home mango repo.
+aka the home mango.
 It is called to display help information for mango commands.
 
 Display help for the prebuilt home mango commands.

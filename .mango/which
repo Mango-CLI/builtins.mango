@@ -41,15 +41,15 @@ def which():
     
     binding: str | None = args.binding
     
-    # Get the current repo
+    # Get the current mango repository
     try:
         current_repo = closestMangoRepo()
     except FileNotFoundError:
-        fatal_error("No mango repo found.")
+        fatal_error("No mango repository found.")
     
     # If no binding is provided, show the active mango repository path
     if binding is None:
-        print("Active mango repo:", color="white", end=' ')
+        print("Active mango repository:", color="white", end=' ')
         print(current_repo, color="green")
         return
     
@@ -76,7 +76,7 @@ def which():
         assert(len(found_scripts) > 0)
         
         # Display the results
-        print(f"Corresponding mango repo: {color(current_repo, 'green')}", color="white")
+        print(f"Corresponding mango repository: {color(current_repo, 'green')}", color="white")
         primary = found_scripts[0]
         display_script(primary, shadowed=False)
         for shadowed_script in found_scripts[1:]:

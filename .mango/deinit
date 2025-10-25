@@ -7,7 +7,7 @@ usage: mango @deinit [repo_path]
 
 This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
 
-The script is called to deinit a mango repo. When no repo is found at the given path, this script will raise a FileNotFoundError.
+The script is called to deinit a mango repository. When no mango repository is found at the given path, this script will raise a FileNotFoundError.
 """
 
 import argparse
@@ -19,18 +19,18 @@ from _tui import uiTypeSelect
 
 
 def delete_repo(repo_path: str):
-    """delete a mango repo
+    """delete a mango repository
 
     Keyword arguments:
-    - repo_path -- the path to the mango repo to delete
+    - repo_path -- the path to the mango repository to delete
     """
 
     # Get the directory to delete
     dir_to_del = os.path.abspath(repo_path)
     if not isMangoRepo(dir_to_del):
-        fatal_error("Repo not found")
+        fatal_error("Mango repository not found")
 
-    print("Deleting the mango repo", color='white')
+    print("Deleting the mango repository", color='white')
     # Delete the .mango folder
     removeFolderRecursively(os.path.join(dir_to_del, '.mango'))
 
@@ -40,32 +40,32 @@ def delete_():
     """
 
     # Parse the arguments
-    parser = argparse.ArgumentParser(description="delete a mango repo")
+    parser = argparse.ArgumentParser(description="delete a mango repository")
     parser.add_argument(
         "repo_path",
         type=str,
-        help="the path to the mango repo",
+        help="the path to the mango repository",
         default='.',
         nargs='?'
     )
     args = parser.parse_args()
 
     if not isMangoRepo(args.repo_path):
-        fatal_error(f"The directory {args.repo_path} is not a mango repo.")
+        fatal_error(f"The directory {args.repo_path} is not a mango repository.")
 
     # Delete the repo
     try:
         idx = uiTypeSelect(
-            prompt="Are you sure you want to delete this mango repo?",
+            prompt="Are you sure you want to delete this mango repository?",
             options=["y", "n"],
             default_id=0,
         )
         if idx != 0:
             return
         delete_repo(args.repo_path)
-        print("Mango repo deleted successfully")
+        print("Mango repository deleted successfully")
     except FileNotFoundError:
-        fatal_error(f"The directory {args.repo_path} is not a mango repo.")
+        fatal_error(f"The directory {args.repo_path} is not a mango repository.")
 
 
 if __name__ == '__main__':

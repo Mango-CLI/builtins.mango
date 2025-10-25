@@ -23,7 +23,7 @@ import argparse
 import re
 
 def bind():
-    parser = argparse.ArgumentParser(description="bind commands to a visible items in a mango base module")
+    parser = argparse.ArgumentParser(description="Bind commands to visible items in the active mango repository")
     parser.add_argument("--submodule", type=str, required=False, help="export bindings from a submodule", default=None)
     parser.add_argument("item", type=str, help="the path to the script to bind or submodule binding to rebind")
     parser.add_argument("bindings", type=str, nargs='*', help="the new bindings given to the script item")
@@ -61,7 +61,7 @@ def bind():
     # Perform the binding logic: simply prepend to the first line of the script file
     if submodule is None and item == '*':
         if len(bindings) != 0:
-            print("Error: When binding to all items in the base module, no specific item should be provided.", color="red")
+            print("Error: When binding to all items in the active mango repository, no specific item should be provided.", color="red")
             exit(1)
         exportSubmoduleBindings(repo_path, bindings)
     else:

@@ -30,12 +30,12 @@ def edit():
     try:
         repo_path = closestMangoRepo(os.getcwd())
     except FileNotFoundError:
-        fatal_error("No mango repo found.")
+        fatal_error("No mango repository found.")
         
     script_path = os.path.join(repo_path, '.mango', script_name)
 
     if not os.path.exists(script_path):
-        fatal_error(f"'{script_name}' does not exist in repo {repo_path}! Maybe call @add to create it?")
+        fatal_error(f"'{script_name}' does not exist in mango repository {repo_path}! Maybe call @add to create it?")
 
     # Get the default editor from environment variable or use nano
     default_editor = os.environ.get('EDITOR', 'nano')

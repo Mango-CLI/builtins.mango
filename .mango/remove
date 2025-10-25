@@ -24,7 +24,7 @@ import argparse
 import os
 
 def remove():
-    parser = argparse.ArgumentParser(description="remove a script or its bindings from a repo")
+    parser = argparse.ArgumentParser(description="remove a script or its bindings from a mango repository")
     parser.add_argument("script_name", type=str, help="the name of the script to remove")
     parser.add_argument("-b", "--bindings", type=str, nargs='*', help="remove bindings only (if no binding names are specified, all bindings will be removed)")
     parser.add_argument("-s", "--source", action='store_true', help="disable source mode but keep the script and bindings")
@@ -34,11 +34,11 @@ def remove():
     if args.bindings is not None and args.source:
         fatal_error("Cannot use -b/--bindings and -s/--source flags together.")
     
-    # Get the current repo
+    # Get the current mango repository
     try:
         current_repo = closestMangoRepo()
     except FileNotFoundError:
-        fatal_error("No mango repo found.")
+        fatal_error("No mango repository found.")
     
     # Check if the script exists
     script_path = os.path.join(current_repo, '.mango', args.script_name)
