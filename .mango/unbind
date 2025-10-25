@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+
+"""
+unbind
+
+usage: mango @unbind [script_name] [binding_name ...] (--submodule SUBMODULE_NAME)
+
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
+
+Detach commands from a script without touching the script itself. Defaults to removing every binding after confirmation.
+"""
+
+from _common import (
+    closestMangoRepo,
+    getRegisteredItems,
+    existScript,
+    existSubmodule,
+    confirmDestructiveAction,
+    removeInstructionBindings,
+)
+from _cprint import print, fatal_error
+
+import argparse
+import os
+
+
+def unbind():
+    """Unbind commands from a script or submodule in the active mango repository."""
+    parser = argparse.ArgumentParser(
+        description="unbind commands from a script or submodule in a mango repository"
+    )
+    parser.add_argument(
+        "script_name", 
+        type=str, 
+        nargs='?',
+        help="the name of the script or command to unbind"
+    )
+    parser.add_argument(
+        "bindings",
+        type=str,
+        nargs="*",
+        help="specific bindings to remove (if not specified, all bindings will be removed)",
+    )
+    parser.add_argument(
+        "--submodule",
+        type=str,
+        help="unbind from a submodule instead of a regular script",
+    )
+    args = parser.parse_args()
+
+    # Validate arguments
+    if args.submodule is None and args.script_name is None:
+        fatal_error("Either a script name or --submodule must be specified.")
+
+    try:
+        current_repo = closestMangoRepo()
+    except FileNotFoundError:
+        fatal_error("No mango repository found.")
+
+    # Handle submodule-only unbinding (unbind all exports from a submodule)
+    if args.submodule is not None and args.script_name is None:
+        if not existSubmodule(current_repo, args.submodule):
+            fatal_error(f"Submodule '{args.submodule}' does not exist.")
+
+        if not confirmDestructiveAction(
+            prompt=f"Remove all exported bindings from submodule '{args.submodule}'?"
+        ):
+            print("Operation cancelled.", color="gray")
+            return
+
+        try:
+            # Remove the submodule export entry from .instructions
+            instructions_path = os.path.join(current_repo, ".mango", ".instructions")
+            with open(instructions_path, "r") as instructions_file:
+                lines = instructions_file.readlines()
+            
+            updated_lines = []
+            for line in lines:
+                stripped_line = line.strip()
+                if stripped_line.startswith(f"[{args.submodule}]") and "*" in stripped_line:
+                    continue  # Skip this line (remove the export)
+                updated_lines.append(line)
+            
+            with open(instructions_path, "w") as instructions_file:
+                instructions_file.writelines(updated_lines)
+            
+            print(f"All exported bindings removed from submodule '{args.submodule}'.", color="green")
+            return
+        except Exception as e:
+            fatal_error(f"Failed to remove submodule exports: {e}")
+
+    # Handle regular script or submodule command unbinding
+    if args.submodule is not None:
+        # Verify submodule exists
+        if not existSubmodule(current_repo, args.submodule):
+            fatal_error(f"Submodule '{args.submodule}' does not exist.")
+        
+        # Get the submodule path
+        submodule_path = os.path.join(current_repo, ".mango", ".submodules", args.submodule)
+        
+        # Check if the command exists in the submodule
+        registered_items = getRegisteredItems(submodule_path)
+        command_found = False
+        for item in registered_items:
+            if item.name() == args.script_name:
+                command_found = True
+                break
+        
+        if not command_found:
+            fatal_error(f"Command '{args.script_name}' not found in submodule '{args.submodule}'.")
+        
+        # Get the current bindings for this command in the submodule
+        submodule_bindings = []
+        for item in registered_items:
+            if item.name() == args.script_name:
+                submodule_bindings = item.bindings
+                break
+        
+        # If no specific bindings provided, remove all
+        if not args.bindings:
+            if not submodule_bindings:
+                print(f"Command '{args.script_name}' in submodule '{args.submodule}' has no bindings to remove.", color="yellow")
+                return
+            
+            if not confirmDestructiveAction(
+                prompt=f"Remove all bindings from command '{args.script_name}' in submodule '{args.submodule}'?"
+            ):
+                print("Operation cancelled.", color="gray")
+                return
+            
+            try:
+                # Remove the submodule command entry from .instructions
+                instructions_path = os.path.join(current_repo, ".mango", ".instructions")
+                with open(instructions_path, "r") as instructions_file:
+                    lines = instructions_file.readlines()
+                
+                updated_lines = []
+                for line in lines:
+                    stripped_line = line.strip()
+                    if (stripped_line.startswith(f"[{args.submodule}]") and 
+                        args.script_name in stripped_line and ":" in stripped_line):
+                        continue  # Skip this line (remove the binding)
+                    updated_lines.append(line)
+                
+                with open(instructions_path, "w") as instructions_file:
+                    instructions_file.writelines(updated_lines)
+                
+                print(f"All bindings removed from command '{args.script_name}' in submodule '{args.submodule}'.", color="green")
+                return
+            except Exception as e:
+                fatal_error(f"Failed to remove bindings: {e}")
+        
+        # Remove specific bindings
+        bindings_to_remove = args.bindings
+        invalid_bindings = [b for b in bindings_to_remove if b not in submodule_bindings]
+        if invalid_bindings:
+            fatal_error(f"Bindings {', '.join(invalid_bindings)} are not bound to command '{args.script_name}' in submodule '{args.submodule}'.")
+        
+        if not confirmDestructiveAction(
+            prompt=f"Remove bindings {', '.join(bindings_to_remove)} from command '{args.script_name}' in submodule '{args.submodule}'?"
+        ):
+            print("Operation cancelled.", color="gray")
+            return
+        
+        try:
+            # Update the submodule command entry in .instructions
+            instructions_path = os.path.join(current_repo, ".mango", ".instructions")
+            with open(instructions_path, "r") as instructions_file:
+                lines = instructions_file.readlines()
+            
+            updated_lines = []
+            for line in lines:
+                stripped_line = line.strip()
+                if (stripped_line.startswith(f"[{args.submodule}]") and 
+                    args.script_name in stripped_line and ":" in stripped_line):
+                    # Update this line to remove the specified bindings
+                    parts = stripped_line.split(":", 1)
+                    if len(parts) == 2:
+                        current_bindings = parts[1].strip().split()
+                        new_bindings = [b for b in current_bindings if b not in bindings_to_remove]
+                        if new_bindings:
+                            updated_lines.append(f"[{args.submodule}] {args.script_name}: {' '.join(new_bindings)}\n")
+                        # If no bindings left, we don't add the line back (effectively removing it)
+                else:
+                    updated_lines.append(line)
+            
+            with open(instructions_path, "w") as instructions_file:
+                instructions_file.writelines(updated_lines)
+            
+            print(f"Bindings {', '.join(bindings_to_remove)} removed from command '{args.script_name}' in submodule '{args.submodule}'.", color="green")
+            return
+        except Exception as e:
+            fatal_error(f"Failed to remove bindings: {e}")
+    
+    # Handle regular script unbinding
+    if not existScript(current_repo, args.script_name):
+        fatal_error(f"Script '{args.script_name}' does not exist.")
+    
+    # Get the current bindings for this script
+    registered_scripts = getRegisteredItems(current_repo)
+    script_bindings = []
+    for script in registered_scripts:
+        if script.name() == args.script_name:
+            script_bindings.extend(script.bindings)
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_bindings = []
+    for binding in script_bindings:
+        if binding not in seen:
+            seen.add(binding)
+            unique_bindings.append(binding)
+    
+    # If no specific bindings provided, remove all
+    if not args.bindings:
+        if not unique_bindings:
+            print(f"Script '{args.script_name}' has no bindings to remove.", color="yellow")
+            return
+        
+        if not confirmDestructiveAction(
+            prompt=f"Remove all bindings from script '{args.script_name}'?"
+        ):
+            print("Operation cancelled.", color="gray")
+            return
+        
+        try:
+            removeInstructionBindings(
+                mango_repo_path=current_repo,
+                script_name=args.script_name,
+                remove_all=True,
+            )
+            print(f"All bindings removed from script '{args.script_name}'.", color="green")
+            return
+        except ValueError as err:
+            fatal_error(str(err))
+    
+    # Remove specific bindings
+    bindings_to_remove = args.bindings
+    invalid_bindings = [b for b in bindings_to_remove if b not in unique_bindings]
+    if invalid_bindings:
+        fatal_error(f"Bindings {', '.join(invalid_bindings)} are not bound to script '{args.script_name}'.")
+    
+    if not confirmDestructiveAction(
+        prompt=f"Remove bindings {', '.join(bindings_to_remove)} from script '{args.script_name}'?"
+    ):
+        print("Operation cancelled.", color="gray")
+        return
+    
+    try:
+        removeInstructionBindings(
+            mango_repo_path=current_repo,
+            script_name=args.script_name,
+            bindings_to_remove=set(bindings_to_remove),
+        )
+        print(f"Bindings {', '.join(bindings_to_remove)} removed from script '{args.script_name}'.", color="green")
+        return
+    except ValueError as err:
+        fatal_error(str(err))
+
+
+if __name__ == "__main__":
+    unbind()

@@ -195,6 +195,25 @@ def getRegisteredItems(mango_repo_path: str, starting_submodule: list[str] = [])
             ))
     return scripts
 
+def getExportedSubmodules(mango_repo_path: str) -> list[str]:
+    """get a list of exported submodules in the mango repository.
+
+    Keyword arguments:
+    - mango_repo_path -- the path to the mango repository
+
+    Return: a list of submodule names representing the exported submodules
+    """
+
+    instructions_path = os.path.join(mango_repo_path, ".mango", ".instructions")
+    exported_submodules = []
+    with open(instructions_path, "r") as instructions_file:
+        for line in instructions_file:
+            line = line.strip()
+            if line.startswith('[') and line.endswith('*'):
+                submodule_name = line[1: line.index("]")]
+                exported_submodules.append(submodule_name)
+    return exported_submodules
+
 def existScript(mango_repo_path: str, script_name: str) -> bool:
     """determine whether a script exists in the mango repository
 
