@@ -6,6 +6,8 @@ from _cprint import print
 from dataclasses import dataclass
 from typing import Callable
 
+from _tui import uiTypeSelect
+
 
 #: Common Mango Structures
 
@@ -110,6 +112,33 @@ def getBindingsForLine(line: str) -> list[str]:
     if ":" not in line:
         return []
     return line.split(":")[1].strip().split()
+
+def parseInstructionEntry(line: str) -> tuple[str, bool, list[str]] | None:
+    """parse a top-level .instructions entry.
+
+    Supports inline comments and ignores submodule entries.
+    Returns a tuple of (script_name, is_source_entry, bindings) when the line
+    represents a top-level script entry. Otherwise returns None.
+    """
+
+    stripped_line = line.strip()
+    if stripped_line == "" or stripped_line.startswith("#"):
+        return None
+
+    content = stripped_line.split("#", 1)[0].strip()
+    if content == "" or content.startswith("[") or ":" not in content:
+        return None
+
+    prefix, bindings_part = content.split(":", 1)
+    prefix = prefix.strip()
+    is_source_entry = prefix.startswith("*")
+    script_name = prefix[1:] if is_source_entry else prefix
+    script_name = script_name.strip()
+    if script_name == "":
+        return None
+
+    bindings = bindings_part.strip().split()
+    return script_name, is_source_entry, bindings
 
 def getRegisteredItems(mango_repo_path: str, starting_submodule: list[str] = []) -> list[ScriptInfo]:
     """get a list of registered scripts in the mango repository.
@@ -322,6 +351,84 @@ def exportSubmoduleBindings(mango_repo_path: str, submodule: str, lines: list[st
     lines = [line] + lines
     return lines
 
+@enactInstructionsList
+def removeInstructionBindings(
+    mango_repo_path: str,
+    script_name: str,
+    *,
+    bindings_to_remove: set[str] | None = None,
+    remove_all: bool = False,
+    lines: list[str] | None = None,
+) -> list[str]:
+    """mutate bindings for a top-level script entry in .instructions.
+
+    Removes bindings specified in bindings_to_remove. When remove_all is True,
+    all bindings are removed (the entry is deleted). Raises ValueError if the
+    target entry does not exist or a requested binding is missing unless
+    remove_all is True.
+    """
+
+    if lines is None:
+        return []
+
+    target_index: int | None = None
+    target_entry: tuple[str, bool, list[str]] | None = None
+    for idx, raw_line in enumerate(lines):
+        parsed = parseInstructionEntry(raw_line)
+        if parsed is not None and parsed[0] == script_name:
+            target_index = idx
+            target_entry = parsed
+            break
+
+    if target_entry is None:
+        if remove_all:
+            return lines
+        raise ValueError(f"script '{script_name}' is not registered in .instructions")
+
+    existing_bindings = target_entry[2]
+    bindings_to_remove = set() if bindings_to_remove is None else set(bindings_to_remove)
+    if not remove_all:
+        missing = bindings_to_remove.difference(existing_bindings)
+        if missing:
+            missing_list = ", ".join(sorted(missing))
+            raise ValueError(
+                f"bindings {missing_list} are not registered to script '{script_name}'"
+            )
+
+    updated_bindings = [] if remove_all else [b for b in existing_bindings if b not in bindings_to_remove]
+
+    assert target_index is not None
+    original_line = lines[target_index]
+    line_ending = "\n" if original_line.endswith("\n") else ""
+
+    if len(updated_bindings) == 0:
+        lines.pop(target_index)
+    else:
+        prefix = "*" if target_entry[1] else ""
+        lines[target_index] = f"{prefix}{script_name}: {' '.join(updated_bindings)}{line_ending}"
+
+    return lines
+
+@enactInstructionsList
+def deleteInstructionEntry(
+    mango_repo_path: str,
+    script_name: str,
+    lines: list[str] | None = None,
+) -> list[str]:
+    """delete a top-level .instructions entry for the provided script name."""
+
+    if lines is None:
+        return []
+
+    updated_lines: list[str] = []
+    for raw_line in lines:
+        parsed = parseInstructionEntry(raw_line)
+        if parsed is not None and parsed[0] == script_name:
+            continue
+        updated_lines.append(raw_line)
+
+    return updated_lines
+
 
 #: Broad Utility Functions
 
@@ -339,6 +446,13 @@ def executeIfExists(executable_path: str, args, throw: bool = False) -> None:
         os.system(command)
     elif throw:
         raise FileNotFoundError(f"{executable_path} not found")
+
+def confirmDestructiveAction(prompt: str, *, default_yes: bool = True) -> bool:
+    """prompt the user for confirmation on destructive actions."""
+    options = ["y", "n"]
+    default_index = 0 if default_yes else 1
+    choice = uiTypeSelect(prompt=prompt, options=options, default_id=default_index)
+    return choice == 0
 
 def removeFolderRecursively(folder_path: str) -> None:
     """remove a folder and all its contents.
