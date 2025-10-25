@@ -7,7 +7,7 @@ init: init
 deinit: deinit
 del: del
 add: add
-rm: remove
+remove: remove
 list: list
 edit: edit
 bind: bind

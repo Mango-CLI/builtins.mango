@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+
+"""
+remove
+
+usage: mango @remove [script_name] (-b, --bindings [binding_name ...]) (-s, --source)
+
+This is a prebuilt script in the builtins submodule. It is shipped with mango and is automatically installed in the user's home mango.
+
+Delete scripts or selectively drop their bindings in the current mango repository. Confirmations are requested before destructive actions.
+"""
+
+from _common import (
+    closestMangoRepo,
+    getRegisteredItems,
+    existScript,
+    setSourcePolicy,
+    ScriptInfo,
+)
+from _tui import uiTypeSelect
+from _cprint import print, fatal_error
+
+import argparse
+import os
+
+def remove():
+    parser = argparse.ArgumentParser(description="remove a script or its bindings from a repo")
+    parser.add_argument("script_name", type=str, help="the name of the script to remove")
+    parser.add_argument("-b", "--bindings", type=str, nargs='*', help="remove bindings only (if no binding names are specified, all bindings will be removed)")
+    parser.add_argument("-s", "--source", action='store_true', help="disable source mode but keep the script and bindings")
+    args = parser.parse_args()
+    
+    # Validate that -b and -s are not used together
+    if args.bindings is not None and args.source:
+        fatal_error("Cannot use -b/--bindings and -s/--source flags together.")
+    
+    # Get the current repo
+    try:
+        current_repo = closestMangoRepo()
+    except FileNotFoundError:
+        fatal_error("No mango repo found.")
+    
+    # Check if the script exists
+    script_path = os.path.join(current_repo, '.mango', args.script_name)
+    if not existScript(current_repo, args.script_name):
+        fatal_error(f"Script '{args.script_name}' does not exist.")
+    
+    # Get registered scripts to find the script info
+    registered_scripts = getRegisteredItems(current_repo)
+    script_info = None
+    all_bindings = []
+    source_mode = False
+    
+    # Collect all bindings for the script from all entries
+    for script in registered_scripts:
+        if script.name() == args.script_name:
+            all_bindings.extend(script.bindings)
+            if script.source:
+                source_mode = True
+    
+    # Create a consolidated script_info with all bindings
+    if all_bindings or source_mode:
+        script_info = ScriptInfo(
+            virtual_submodule_path=[],
+            within_submodule_path=args.script_name,
+            source=source_mode,
+            bindings=all_bindings
+        )
+    else:
+        # If the script exists but is not registered, create a minimal script_info
+        script_info = ScriptInfo(
+            virtual_submodule_path=[],
+            within_submodule_path=args.script_name,
+            source=False,
+            bindings=[]
+        )
+    
+    # Handle different removal modes
+    if args.source:
+        # Disable source mode but keep script and bindings
+        if not script_info.source:
+            print(f"Script '{args.script_name}' is already not in source mode.", color="yellow")
+            return
+        
+        # Ask for confirmation
+        result = uiTypeSelect(
+            prompt=f"Disable source mode for script '{args.script_name}'?",
+            options=["y", "n"],
+            default_id=0,
+        )
+        if result == 1:  # n
+            print("Operation cancelled.", color="gray")
+            return
+        
+        # Update the source policy
+        setSourcePolicy(mango_repo_path=current_repo, script_name=args.script_name, use_source=False)
+        print(f"Source mode disabled for script '{args.script_name}'.", color="green")
+    
+    elif args.bindings is not None:
+        # Remove bindings but keep the script
+        if not script_info.bindings:
+            print(f"Script '{args.script_name}' has no bindings to remove.", color="yellow")
+            return
+        
+        # If no specific bindings are provided, remove all bindings
+        if not args.bindings:
+            # Ask for confirmation
+            result = uiTypeSelect(
+                prompt=f"Remove all bindings from script '{args.script_name}'?",
+                options=["y", "n"],
+                default_id=0,
+            )
+            if result == 1:  # n
+                print("Operation cancelled.", color="gray")
+                return
+            
+            # Remove all bindings by updating the .instructions file
+            removeScriptBindings(current_repo, args.script_name, script_info.bindings)
+            print(f"All bindings removed from script '{args.script_name}'.", color="green")
+        else:
+            # Remove specific bindings
+            # Validate that the specified bindings exist
+            invalid_bindings = []
+            for binding in args.bindings:
+                if binding not in script_info.bindings:
+                    invalid_bindings.append(binding)
+            
+            if invalid_bindings:
+                fatal_error(f"The following bindings do not exist for script '{args.script_name}': {', '.join(invalid_bindings)}")
+            
+            # Ask for confirmation
+            result = uiTypeSelect(
+                prompt=f"Remove bindings {', '.join(args.bindings)} from script '{args.script_name}'?",
+                options=["y", "n"],
+                default_id=0,
+            )
+            if result == 1:  # n
+                print("Operation cancelled.", color="gray")
+                return
+            
+            # Remove the specified bindings
+            removeScriptBindings(current_repo, args.script_name, args.bindings)
+            print(f"Bindings {', '.join(args.bindings)} removed from script '{args.script_name}'.", color="green")
+    
+    else:
+        # Delete the script and all its bindings (default behavior)
+        # Ask for confirmation
+        bindings_str = ", ".join(script_info.bindings) if script_info.bindings else "none"
+        result = uiTypeSelect(
+            prompt=f"Delete script '{args.script_name}' and its bindings ({bindings_str})?",
+            options=["y", "n"],
+            default_id=0,
+        )
+        if result == 1:  # n
+            print("Operation cancelled.", color="gray")
+            return
+        
+        # Remove the script file
+        try:
+            os.remove(script_path)
+            print(f"Script file '{args.script_name}' deleted.", color="green")
+        except Exception as e:
+            print(f"Failed to delete script file: {e} from os. Please clean it up yourself.", color="yellow")
+        
+        # Remove the bindings from .instructions
+        if script_info.bindings:
+            removeScriptBindings(current_repo, args.script_name, script_info.bindings)
+            print(f"Bindings {', '.join(script_info.bindings)} removed from .instructions.", color="green")
+        
+        # Remove the script entry from .instructions
+        removeScriptFromInstructions(current_repo, args.script_name)
+        print(f"Script '{args.script_name}' removed from .instructions.", color="green")
+
+def removeScriptBindings(mango_repo_path: str, script_name: str, bindings_to_remove: list[str]):
+    """Remove specific bindings from a script in the .instructions file."""
+    instructions_path = os.path.join(mango_repo_path, ".mango", ".instructions")
+    
+    with open(instructions_path, "r") as instructions_file:
+        lines = instructions_file.readlines()
+    
+    # Find and update the line with the script
+    updated_lines = []
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith(f"{script_name}:") or stripped_line.startswith(f"*{script_name}:"):
+            # Parse the line to get the current bindings
+            parts = stripped_line.split(":")
+            if len(parts) < 2:
+                updated_lines.append(line)
+                continue
+            
+            # Get the current bindings
+            current_bindings = parts[1].strip().split()
+            
+            # Remove the specified bindings
+            new_bindings = [b for b in current_bindings if b not in bindings_to_remove]
+            
+            # Update the line
+            if new_bindings:
+                # Keep the line with remaining bindings
+                source_prefix = "*" if stripped_line.startswith(f"*{script_name}:") else ""
+                updated_line = f"{source_prefix}{script_name}: {' '.join(new_bindings)}\n"
+                updated_lines.append(updated_line)
+            else:
+                # Remove the line entirely if no bindings left
+                pass
+        else:
+            updated_lines.append(line)
+    
+    # Write the updated content back to the file
+    with open(instructions_path, "w") as instructions_file:
+        instructions_file.writelines(updated_lines)
+
+def removeScriptFromInstructions(mango_repo_path: str, script_name: str):
+    """Remove a script entry from the .instructions file."""
+    instructions_path = os.path.join(mango_repo_path, ".mango", ".instructions")
+    
+    with open(instructions_path, "r") as instructions_file:
+        lines = instructions_file.readlines()
+    
+    # Remove any line that mentions the script
+    updated_lines = []
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith(f"{script_name}:") or stripped_line.startswith(f"*{script_name}:"):
+            # Skip this line (remove it)
+            pass
+        else:
+            updated_lines.append(line)
+    
+    # Write the updated content back to the file
+    with open(instructions_path, "w") as instructions_file:
+        instructions_file.writelines(updated_lines)
+
+if __name__ == '__main__':
+    remove()
