@@ -7,3 +7,12 @@
 
 [32m- Detach specific commands only:[0m
         [33mmango @unbind[0m [37mscript binding_1 binding_2[0m
+
+[32m- Unbind selective bindings from submodule command:[0m
+        [33mmango @unbind[0m [37mcommand binding_1 binding_2 --submodule submodule[0m
+
+[32m- Unbind all bindings from submodule command:[0m
+        [33mmango @unbind[0m [37mcommand --submodule submodule[0m
+
+[32m- Unbind exporting all commands from a submodule:[0m
+        [33mmango @unbind[0m [37m--submodule submodule[0m

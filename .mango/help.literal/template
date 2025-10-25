@@ -3,7 +3,8 @@
 [37mManage registered templates. Use 'mango @help template <subcommand>' for details on a specific subcommand.[0m
 
 [32m- Initialize with a template:[0m
-        [33mmango @template init [37mtemplate_name | template_git[0m
+        [33mmango @template init [37mpython[0m
+        [33mmango @template init [37mhttps://github.com/user/repo.git[0m
 
 [32m- Register a template into the local registry:[0m
         [33mmango @template register [37m(rename_to)[0m
@@ -12,4 +13,4 @@
         [33mmango @template unregister [37mtemplate_name[0m
 
 [32m- List templates in the local registry:[0m
-        [33mmango @template list [37m(--registry)[0m
+        [33mmango @template list[0m
