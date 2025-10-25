@@ -16,7 +16,7 @@ If repo_path is not provided, the program will search from . and find the closes
 import argparse
 import os
 
-from _common import closestMangoRepo, isMangoRepo, getRegisteredItems, existSubmodule
+from _common import closestMangoRepo, isMangoRepo, getRegisteredItems, existSubmodule, getExportedSubmodules
 from _cprint import print
 
 
@@ -73,13 +73,19 @@ def list_commands(repo_path: str):
 
     # print out all the submodules
     submodules_path = os.path.join(repo_path, '.mango', '.submodules')
+    exported_submodules = getExportedSubmodules(repo_path)
     if os.path.isdir(submodules_path):
         submodules = os.listdir(submodules_path)
         if len(submodules) > 0:
             print("Submodules in mango repository:", color="cyan", bold=True)
             for submodule in submodules:
+                is_exported = submodule in exported_submodules
                 print("→ ", color="white", bold=True, end='')
-                print(f"{submodule}", color="yellow")
+                if is_exported:
+                    print(f"{submodule}", color="yellow", end=' ')
+                    print("(exported)", color="gray")
+                else:
+                    print(f"{submodule}", color="white")
             print('')
 
 if __name__ == '__main__':
