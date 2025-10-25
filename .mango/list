@@ -76,7 +76,7 @@ def list_commands(repo_path: str):
     if os.path.isdir(submodules_path):
         submodules = os.listdir(submodules_path)
         if len(submodules) > 0:
-            print(f"Submodules in mango repository: {repo_path}", color="cyan", bold=True)
+            print("Submodules in mango repository:", color="cyan", bold=True)
             for submodule in submodules:
                 print("→ ", color="white", bold=True, end='')
                 print(f"{submodule}", color="yellow")
