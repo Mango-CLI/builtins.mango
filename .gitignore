@@ -1,5 +1,6 @@
 .vscode
 .idea
+.kilocode
 
 __pycache__
 *.pyc
