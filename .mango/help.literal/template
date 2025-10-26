@@ -1,6 +1,6 @@
 [1;37mtemplate[0m
 
-[37mManage registered templates. Use 'mango @help template <subcommand>' for details on a specific subcommand.[0m
+[37mManage registered templates.[0m
 
 [32m- Initialize with a template:[0m
         [33mmango @template init [37mpython[0m

@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+
+"""
+submodule
+
+usage: mango @submodule [command] [args]
+
+Manage repository submodules. Use 'mango @help submodule <subcommand>' for details on a specific subcommand.
+"""
+
+import argparse
+import os
+
+from _common import (
+    closestMangoRepo,
+    existSubmodule,
+    getExportedSubmodules,
+    homeFolder,
+    gitPull,
+    removeFolderRecursively,
+    MangoRegistryError,
+    ItemAlreadyExistsError,
+    GitOperationError,
+    InvalidMangoRepoError,
+    gitPathFromSubmodule,
+    gitBasename,
+    gitCloneBare,
+    installSubmodule,
+    removeAllInstructionsFromSubmodule,
+    getUserRegistryPath,
+)
+from _cprint import print, fatal_error
+from typing import Optional
+
+
+def add_submodule(repo_path: str, submodule: str, rename_to: Optional[str] = None):
+    """Add a submodule to the repository."""
+    
+    submodule_git = gitPathFromSubmodule(submodule, registries=[
+        os.path.join(homeFolder(), ".mango", ".submodules.registry")
+    ])
+    submodule_name = rename_to or gitBasename(submodule_git)
+    
+    if existSubmodule(repo_path, submodule_name):
+        fatal_error(f"Submodule '{submodule_name}' already exists.")
+    
+    print(f"Adding submodule '{submodule_name}' from {submodule}", color='green')
+    
+    try:
+        installSubmodule(repo_path, submodule_git, rename_to=rename_to)
+        print(f"Submodule '{submodule_name}' added successfully.", color='green')
+    except (GitOperationError, InvalidMangoRepoError) as e:
+        fatal_error(str(e))
+
+def remove_submodule(repo_path: str, submodule_name: str):
+    """Remove a submodule from the repository."""
+    if not existSubmodule(repo_path, submodule_name):
+        fatal_error(f"Submodule '{submodule_name}' does not exist.")
+    
+    submodule_path = os.path.join(repo_path, ".mango", ".submodules", submodule_name)
+    
+    try:
+        removeAllInstructionsFromSubmodule(repo_path, submodule_name)
+        removeFolderRecursively(submodule_path)
+        
+        print(f"Submodule '{submodule_name}' removed successfully.", color='green')
+    except MangoRegistryError as e:
+        fatal_error(str(e))
+
+def update_submodule(repo_path: str, submodule_name=None):
+    """Update submodules in the repository."""
+    submodules_dir = os.path.join(repo_path, ".mango", ".submodules")
+    
+    if not os.path.exists(submodules_dir):
+        fatal_error("No submodules directory found.")
+    
+    try:
+        if submodule_name:
+            # Update a specific submodule
+            if not existSubmodule(repo_path, submodule_name):
+                fatal_error(f"Submodule '{submodule_name}' does not exist.")
+            
+            submodule_path = os.path.join(submodules_dir, submodule_name)
+            gitPull(submodule_path)
+            print(f"Submodule '{submodule_name}' updated successfully.", color='green')
+        else:
+            # Update all submodules
+            submodules = [d for d in os.listdir(submodules_dir) 
+                         if os.path.isdir(os.path.join(submodules_dir, d))]
+            
+            if not submodules:
+                print("No submodules found.", color='yellow')
+                return
+            
+            for submodule in submodules:
+                submodule_path = os.path.join(submodules_dir, submodule)
+                print(f"Updating submodule '{submodule}'", color='yellow')
+                gitPull(submodule_path)
+            
+            print("All submodules updated successfully.", color='green')
+    except GitOperationError as e:
+        fatal_error(str(e))
+
+def register_submodule(repo_path: str, rename_to=None):
+    """Register the current directory as a submodule in the home mango."""
+    
+    submodule_name = rename_to or os.path.basename(repo_path)
+    
+    try:
+        # Create registry directory if it doesn't exist
+        registry_path = getUserRegistryPath('submodule')
+        os.makedirs(registry_path, exist_ok=True)
+        
+        # Check if already registered
+        submodule_path = os.path.join(registry_path, submodule_name)
+        if os.path.exists(submodule_path):
+            raise ItemAlreadyExistsError(f"Submodule '{submodule_name}' already exists in registry")
+        
+        # Bare clone the current directory to the registry
+        gitCloneBare(url=repo_path, dest_path=submodule_path)
+        print(f"Submodule '{submodule_name}' registered successfully.", color='green')
+    except (ItemAlreadyExistsError, OSError) as e:
+        fatal_error(str(e))
+
+def unregister_submodule(submodule_name):
+    """Unregister a submodule from the home mango."""
+    registry_path = os.path.join(homeFolder(), ".mango", ".submodules.registry")
+    submodule_path = os.path.join(registry_path, submodule_name)
+    
+    if not os.path.exists(submodule_path):
+        fatal_error(f"Submodule '{submodule_name}' is not registered.")
+    
+    try:
+        removeFolderRecursively(submodule_path)
+        print(f"Submodule '{submodule_name}' unregistered successfully.", color='green')
+    except OSError as e:
+        fatal_error(str(e))
+
+def list_submodule(repo_path=None, registry=False):
+    """List submodules in a repository or in the registry."""
+    try:
+        if registry:
+            # List submodules in the registry
+            registry_path = getUserRegistryPath('submodule')
+            
+            if not os.path.exists(registry_path):
+                print("No submodules registry found.", color='yellow')
+                return
+            
+            submodules = [d for d in os.listdir(registry_path)
+                         if os.path.isdir(os.path.join(registry_path, d)) or
+                         os.path.islink(os.path.join(registry_path, d))]
+            
+            if not submodules:
+                print("No submodules in registry.", color='yellow')
+                return
+            
+            print("Registered submodules:", color='green')
+            for submodule in sorted(submodules):
+                print(f"  - {submodule}", color='white')
+        else:
+            # List submodules in a repository
+            if not repo_path:
+                repo_path = closestMangoRepo()
+            
+            submodules_dir = os.path.join(repo_path, ".mango", ".submodules")
+            
+            if not os.path.exists(submodules_dir):
+                print("No submodules directory found.", color='yellow')
+                return
+            
+            submodules = [d for d in os.listdir(submodules_dir)
+                         if os.path.isdir(os.path.join(submodules_dir, d))]
+            
+            if not submodules:
+                print("No submodules found.", color='yellow')
+                return
+            
+            # Get exported submodules
+            exported = getExportedSubmodules(repo_path)
+            
+            print("Repository submodules:", color='green')
+            for submodule in sorted(submodules):
+                status = " (exported)" if submodule in exported else ""
+                print(f"  - {submodule}{status}", color='white')
+    except (InvalidMangoRepoError, MangoRegistryError) as e:
+        fatal_error(str(e))
+
+
+def main():
+    """Main function for the submodule script."""
+    parser = argparse.ArgumentParser(description="manage repository submodules")
+    subparsers = parser.add_subparsers(dest='command', help='available commands')
+    
+    # Add command
+    add_parser = subparsers.add_parser('add', help='add a submodule')
+    add_parser.add_argument('submodule', help='git repository URL or registered submodule name')
+    add_parser.add_argument('rename_to', nargs='?', help='optional new name for the submodule')
+    
+    # Remove command
+    remove_parser = subparsers.add_parser('remove', help='remove a submodule')
+    remove_parser.add_argument('submodule_name', help='name of the submodule to remove')
+    
+    # Update command
+    update_parser = subparsers.add_parser('update', help='update submodules')
+    update_parser.add_argument('submodule_name', nargs='?', help='name of the submodule to update (optional)')
+    
+    # Register command
+    register_parser = subparsers.add_parser('register', help='register current directory as a submodule')
+    register_parser.add_argument('rename_to', nargs='?', help='optional new name for the submodule')
+    
+    # Unregister command
+    unregister_parser = subparsers.add_parser('unregister', help='unregister a submodule')
+    unregister_parser.add_argument('submodule_name', help='name of the submodule to unregister')
+    
+    # List command
+    list_parser = subparsers.add_parser('list', help='list submodules')
+    list_parser.add_argument('repo_path', nargs='?', help='path to the repository (optional)')
+    list_parser.add_argument('--registry', action='store_true', help='list submodules in the registry')
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    try:
+        if args.command == 'add':
+            repo_path = closestMangoRepo()
+            add_submodule(repo_path, args.submodule, args.rename_to)
+        elif args.command == 'remove':
+            repo_path = closestMangoRepo()
+            remove_submodule(repo_path, args.submodule_name)
+        elif args.command == 'update':
+            repo_path = closestMangoRepo()
+            update_submodule(repo_path, args.submodule_name)
+        elif args.command == 'register':
+            register_submodule(args.rename_to)
+        elif args.command == 'unregister':
+            unregister_submodule(args.submodule_name)
+        elif args.command == 'list':
+            list_submodule(args.repo_path, args.registry)
+    except (InvalidMangoRepoError, MangoRegistryError) as e:
+        fatal_error(str(e))
+    except Exception as e:
+        fatal_error(f"Error: {e}")
+
+
+if __name__ == '__main__':
+    main()

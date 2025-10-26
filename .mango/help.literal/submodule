@@ -1,6 +1,6 @@
 [1;37msubmodule[0m
 
-[37mManage repository submodules. Use 'mango @help submodule <subcommand>' for details on a specific subcommand.[0m
+[37mManage repository submodules.[0m
 
 [32m- Add a submodule:[0m
         [33mmango @submodule add [37msubmodule_git | submodule_name (rename_to)[0m

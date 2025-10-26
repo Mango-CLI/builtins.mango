@@ -1,12 +1,34 @@
 import os
 import shutil
+import subprocess
+from dataclasses import dataclass
+from typing import Callable, Literal, Optional
 
 import _cprint  # noqa: F401
 from _cprint import print
-from dataclasses import dataclass
-from typing import Callable
-
 from _tui import uiTypeSelect
+
+#: Custom Exception Hierarchy for Mango Operations
+
+class MangoRegistryError(Exception):
+    """Base exception for all Mango registry operations."""
+    pass
+
+class ItemNotFoundError(MangoRegistryError):
+    """Raised when an item (template/submodule) is not found in the registry."""
+    pass
+
+class ItemAlreadyExistsError(MangoRegistryError):
+    """Raised when attempting to register an item that already exists."""
+    pass
+
+class GitOperationError(MangoRegistryError):
+    """Raised when a git operation fails."""
+    pass
+
+class InvalidMangoRepoError(MangoRegistryError):
+    """Raised when a directory is not a valid Mango repository."""
+    pass
 
 
 #: Common Mango Structures
@@ -57,6 +79,33 @@ class ScriptInfo:
 
         return binding in self.bindings
 
+@dataclass
+class SubmoduleSourceInfo:
+    """Information about a submodule or template source.
+    
+    This class handles both templates and submodules with a unified interface.
+    """
+    name: str
+    git: str
+    mode: Literal['builtin', 'registered', 'remote']
+    type: Literal['template', 'submodule'] = 'submodule'
+    
+    @classmethod
+    def from_git_repo(cls, local_path: str, type: Literal['template', 'submodule'], rename: Optional[str] = None) -> 'SubmoduleSourceInfo':
+        """Create a SubmoduleSourceInfo from a local git repository path.
+        
+        Keyword arguments:
+        - local_path -- the local path to the git repository
+        
+        Return: a SubmoduleSourceInfo object representing the git repository
+        """
+        
+        name = rename or os.path.basename(local_path)
+        import re
+        if not re.match(r'^[\w\-.]+$', name):
+            raise ValueError(f"Invalid submodule name '{name}'. Must contain only alphanumeric characters, dashes, underscores, or periods.")
+        git_url = f"file://{os.path.abspath(local_path)}"
+        return cls(name=name, git=git_url, mode='registered', type=type)
 
 #: Common Utility Functions for Mango
 
@@ -74,7 +123,7 @@ def isMangoRepo(path_str: str) -> bool:
 def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
     """find the first mango repository up the directory tree.
 
-    raises a FileNotFoundError if none is found.
+    raises an InvalidMangoRepoError if none is found.
 
     Return: string for the path of the closest mango repository
     """
@@ -84,7 +133,7 @@ def closestMangoRepo(starting_dir: str = os.getcwd()) -> str:
         if isMangoRepo(cur_exec_path_str):
             return cur_exec_path_str
         cur_exec_path_str = os.path.dirname(cur_exec_path_str)
-    raise FileNotFoundError("mango repo not found")
+    raise InvalidMangoRepoError("mango repo not found")
 
 def mapSubmodulePath(submodule_virtual_path: str , base_path: str) -> str:
     """maps a submodule's mango folder path to its real os path
@@ -252,11 +301,14 @@ def existSubmodule(mango_repo_path: str, submodule_name: str) -> bool:
 def buildEmptyMangoRepo(repo_path: str):
     """build an empty mango repository structure.
 
-    Keyword arguments:
-    - repo_path -- the path to the mango repository
+    Args:
+        repo_path: The path to the mango repository
+        
+    Raises:
+        MangoRegistryError: If the directory is already a mango repository or creation fails
     """
     
-    from _cprint import fatal_error, print
+    from _cprint import print
     
     # Convert to absolute path
     repo_path = os.path.abspath(repo_path)
@@ -267,7 +319,7 @@ def buildEmptyMangoRepo(repo_path: str):
     
     # Check if it's already a mango repository
     if isMangoRepo(repo_path):
-        fatal_error(f"Directory {repo_path} is already a mango repository.")
+        raise MangoRegistryError(f"Directory {repo_path} is already a mango repository.")
     
     # Create the basic structure
     mango_dir = os.path.join(repo_path, ".mango")
@@ -275,19 +327,280 @@ def buildEmptyMangoRepo(repo_path: str):
     try:
         # Create .instructions file
         instructions_path = os.path.join(mango_dir, ".instructions")
-        with open(instructions_path, 'w') as f:
-            f.write("# Mango repository instructions\n")
-            f.write("# Add your script bindings here\n")
+        with open(instructions_path, 'w'):
+            pass
         print("Created .instructions file", color='gray')
     except OSError as e:
-        fatal_error(f"Failed to create mango repository structure: {e}")
+        raise MangoRegistryError(f"Failed to create mango repository structure: {e}")
 
-def installSubmodule(repo_path: str, git_path: str):
-    """Install a submodule from a git repository."""
-    submodule_name = os.path.basename(git_path)
-    os.makedirs(os.path.join(repo_path, ".mango", ".submodules"), exist_ok=True)
-    os.system(f"cd {os.path.join(repo_path, '.mango', '.submodules')} && git clone {git_path} --recurse-submodules")
-    executeIfExists(os.path.join(repo_path, '.mango', '.submodules', submodule_name, '.on-install'), args=[repo_path])
+def installSubmodule(repo_path: str, git_path: str, rename_to: Optional[str] = None) -> None:
+    """Install a submodule from a git repository.
+    
+    Args:
+        repo_path: The path to the Mango repository
+        git_path: The git repository URL or path
+        
+    Raises:
+        InvalidMangoRepoError: If repo_path is not a valid Mango repository
+        GitOperationError: If the git clone operation fails
+    """
+    # Verify the repository is a valid Mango repository
+    if not isMangoRepo(repo_path):
+        raise InvalidMangoRepoError(f"Path '{repo_path}' is not a valid Mango repository")
+    
+    submodule_name = gitBasename(git_path)
+    submodules_dir = os.path.join(repo_path, ".mango", ".submodules")
+    os.makedirs(submodules_dir, exist_ok=True)
+    
+    submodule_path = os.path.join(submodules_dir, rename_to or submodule_name)
+    
+    try:
+        # Use subprocess directly for now to avoid circular dependency
+        subprocess.run(
+            ["git", "clone", "--recurse-submodules", git_path, submodule_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise GitOperationError(f"Failed to install submodule '{submodule_name}': {e.stderr}")
+    
+    executeIfExists(os.path.join(submodule_path, '.on-install'), args=[repo_path])
+
+def globForSubmoduleSources(path: str) -> list[SubmoduleSourceInfo]:
+    """glob for submodule sources in a path.
+
+    Keyword arguments:
+    - path -- the path to glob for submodule sources
+
+    Return: a list of SubmoduleSourceInfo objects representing the found submodule sources
+    """
+
+    sources: list[SubmoduleSourceInfo] = []
+    if not os.path.exists(path):
+        return sources
+
+    for entry in os.listdir(path):
+        entry_path = os.path.join(path, entry)
+        if os.path.isdir(entry_path):
+            git_path = os.path.join(entry_path, ".git")
+            if os.path.exists(git_path):
+                sources.append(SubmoduleSourceInfo(
+                    name=entry,
+                    git=f"file://{os.path.abspath(entry_path)}",
+                    mode="registered",
+                ))
+    return sources
+
+
+#: Shared Registry Functions for Templates and Submodules
+
+def getUserRegistryPath(item_type: Literal['template', 'submodule']) -> str:
+    """Get the appropriate registry path for the given item type.
+    
+    The repository path points to the user registry, where users are free to add, audit and remove.
+    
+    Args:
+        item_type: The type of item ('template' or 'submodule')
+        
+    Returns:
+        The path to the appropriate registry directory
+        
+    Raises:
+        ValueError: If item_type is not 'template' or 'submodule'
+    """
+    home_mango = os.path.join(homeFolder(), ".mango")
+    
+    if item_type == 'template':
+        return os.path.join(home_mango, ".templates.registry")
+    elif item_type == 'submodule':
+        return os.path.join(home_mango, ".submodules.registry")
+    else:
+        raise ValueError(f"Invalid item_type: {item_type}. Must be 'template' or 'submodule'.")
+
+def registerSubmodule(source_info: SubmoduleSourceInfo, item_name: str) -> str:
+    """Register a template or submodule in the appropriate registry.
+    
+    Args:
+        source_info: Information about the item to register
+        item_name: The name to register the item under
+        
+    Returns:
+        The path to the registered item
+        
+    Raises:
+        ItemAlreadyExistsError: If the item already exists in the registry
+        GitOperationError: If the git clone operation fails
+    """
+    registry_path = getUserRegistryPath(source_info.type)
+    item_path = os.path.join(registry_path, item_name)
+    
+    # Check if item already exists
+    if os.path.exists(item_path):
+        raise ItemAlreadyExistsError(f"{source_info.type} '{item_name}' already exists in registry {registry_path}")
+
+    # Create registry directory if it doesn't exist
+    os.makedirs(registry_path, exist_ok=True)
+    
+    # Clone the repository
+    try:
+        gitCloneBare(source_info.git, item_path)
+    except GitOperationError as e:
+        raise GitOperationError(f"Failed to register {source_info.type} '{item_name}': {str(e)}")
+    
+    return item_path
+
+def unregisterSubmodule(item_name: str, item_type: Literal['template', 'submodule']) -> None:
+    """Unregister a template or submodule from the appropriate registry.
+    
+    Args:
+        item_name: The name of the item to unregister
+        item_type: The type of item ('template' or 'submodule')
+        
+    Raises:
+        ItemNotFoundError: If the item is not found in the registry
+    """
+    registry_path = getUserRegistryPath(item_type)
+    item_path = os.path.join(registry_path, item_name)
+    
+    # Check if item exists
+    if not os.path.exists(item_path):
+        raise ItemNotFoundError(f"{item_type} '{item_name}' not found in registry {registry_path}")
+    
+    # Remove the item directory
+    try:
+        removeFolderRecursively(item_path)
+    except Exception as e:
+        raise MangoRegistryError(f"Failed to unregister {item_type} '{item_name}': {str(e)}")
+
+def listRegisteredSubmodules(path: str) -> list[SubmoduleSourceInfo]:
+    """List all registered submodules in the given path.
+    
+    Args:
+        path: The path to the directory to search for registered submodules
+        
+    Returns:
+        A list of item names
+        
+    Raises:
+        ValueError: If item_type is not 'template' or 'submodule'
+    """
+    registered_items = []
+    if not os.path.exists(path):
+        return registered_items
+    
+    for entry in os.listdir(path):
+        entry_path = os.path.join(path, entry)
+        git_path = os.path.join(entry_path, "config")
+        if os.path.isdir(entry_path) and os.path.exists(git_path):
+            registered_items.append(SubmoduleSourceInfo(
+                name=entry,
+                git=f"file://{os.path.abspath(entry_path)}",
+                mode="registered",
+            ))
+    return registered_items
+
+def gitPathFromSubmodule(submodule_like: str, registries: list[str]) -> str:
+    """get the git path for a submodule-like item.
+
+    Keyword arguments:
+    - submodule_like -- the submodule-like item to get the git path for
+
+    Return: the git path for the submodule-like item
+    """
+
+    # Direct git URL or file path
+    if submodule_like.startswith("file://") or submodule_like.startswith("http://") or submodule_like.startswith("https://") or submodule_like.startswith("git@"):
+        return submodule_like
+
+    import re
+    if not re.match(r'^[\w\-.]+$', submodule_like):
+        raise ItemNotFoundError(f"Invalid submodule-like item '{submodule_like}'")
+
+    # Search in registries
+    for registry in registries:
+        candidate_path = os.path.join(registry, submodule_like)
+        git_config_path = os.path.join(candidate_path, "config")
+        if os.path.exists(git_config_path):
+            return f"file://{os.path.abspath(candidate_path)}"
+    
+    raise ItemNotFoundError(f"Submodule item '{submodule_like}' not found in registries")
+
+#: Unified Git Operations Interface
+
+def gitCloneBare(url: str, dest_path: str) -> None:
+    """Clone a git repository with bare configuration for registry operations.
+    
+    Args:
+        url: The git repository URL
+        dest_path: The destination path for the cloned repository
+        
+    Raises:
+        GitOperationError: If the git clone operation fails
+    """
+    try:
+        subprocess.run(
+            ["git", "clone", "--bare", url, dest_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise GitOperationError(f"Failed to clone repository '{url}': {e.stderr}")
+
+def gitCloneRegular(url: str, dest_path: str) -> None:
+    """Clone a git repository with regular configuration for local installation.
+    
+    Args:
+        url: The git repository URL
+        dest_path: The destination path for the cloned repository
+        
+    Raises:
+        GitOperationError: If the git clone operation fails
+    """
+    try:
+        subprocess.run(
+            ["git", "clone", "--recurse-submodules", url, dest_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise GitOperationError(f"Failed to clone repository '{url}': {e.stderr}")
+
+def gitPull(repo_path: str) -> None:
+    """Update a repository by pulling the latest changes.
+    
+    Args:
+        repo_path: The path to the repository to update
+        
+    Raises:
+        GitOperationError: If the git pull operation fails
+    """
+    try:
+        subprocess.run(
+            ["git", "pull"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        raise GitOperationError(f"Failed to pull updates in '{repo_path}': {e.stderr}")
+
+def handleGitError(result: subprocess.CompletedProcess) -> None:
+    """Centralized error handling for git operations.
+    
+    Args:
+        result: The result of a subprocess git command
+        
+    Raises:
+        GitOperationError: If the git operation failed
+    """
+    if result.returncode != 0:
+        error_msg = result.stderr.strip() if result.stderr else "Unknown git error"
+        raise GitOperationError(f"Git operation failed: {error_msg}")
+
 
 #: Instructions Handlers
 
@@ -404,6 +717,31 @@ def exportSubmoduleBindings(mango_repo_path: str, submodule: str, lines: list[st
     return lines
 
 @enactInstructionsList
+def removeAllInstructionsFromSubmodule(
+    mango_repo_path: str,
+    submodule: str,
+    lines: list[str] | None = None,
+) -> list[str]:
+    """remove all bindings from a submodule.
+
+    Keyword arguments:
+    - mango_repo_path -- the path to the mango repository
+    - submodule -- the name of the submodule to remove bindings from
+    """
+
+    if lines is None:
+        return []
+
+    updated_lines: list[str] = []
+    submodule_prefix = f"[{submodule}]"
+    for raw_line in lines:
+        if raw_line.strip().startswith(submodule_prefix):
+            continue
+        updated_lines.append(raw_line)
+
+    return updated_lines
+
+@enactInstructionsList
 def removeInstructionBindings(
     mango_repo_path: str,
     script_name: str,
@@ -509,13 +847,19 @@ def confirmDestructiveAction(prompt: str, *, default_yes: bool = True) -> bool:
 def removeFolderRecursively(folder_path: str) -> None:
     """remove a folder and all its contents.
 
-    Keyword arguments:
-    - folder_path -- the path to the folder to remove
+    Args:
+        folder_path: The path to the folder to remove
+        
+    Raises:
+        MangoRegistryError: If the removal operation fails
 
     This implementation is suggested by Nick Stinemates and Mark Amery on
     StackOverflow. See link: https://stackoverflow.com/q/185936
     """
 
+    if not os.path.exists(folder_path):
+        raise MangoRegistryError(f"Folder '{folder_path}' does not exist")
+        
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
         try:
@@ -525,7 +869,7 @@ def removeFolderRecursively(folder_path: str) -> None:
                 shutil.rmtree(file_path)
         except Exception as e:
             print(f"Remove failed: {e}", color="white")
-            raise e
+            raise MangoRegistryError(f"Failed to remove '{file_path}': {str(e)}")
     os.rmdir(folder_path)
 
 def openInEditor(editor: str, file_path: str) -> None:
@@ -552,3 +896,9 @@ def retrievePathFromEnv(var: str, default: list[str] = []):
     envResult = os.environ.get(var)
     envList = envResult.split(':') if envResult is not None else []
     return list(filter(lambda x: len(x) > 0, envList + default))
+
+def gitBasename(git: str) -> str:
+    import re
+    git = git.rstrip('/')
+    git = re.sub(r'\.git$', '', git)
+    return os.path.basename(git)

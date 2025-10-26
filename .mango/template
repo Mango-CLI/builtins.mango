@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+
+"""
+template
+
+usage: mango @template [subcommand] [args]
+
+Manage registered templates. Templates are specialized submodules that are used during repository initialization.
+
+Subcommands:
+- init: Initialize a new mango repository using a template
+- register: Register the current directory as a template in the home mango's .templates.registry
+- unregister: Remove a template from the home mango's .templates.registry
+- list: List all templates in the local registry
+"""
+
+import argparse
+import os
+import sys
+
+from _common import (
+    GitOperationError,
+    ItemAlreadyExistsError,
+    ItemNotFoundError,
+    MangoRegistryError,
+    SubmoduleSourceInfo,
+    buildEmptyMangoRepo,
+    installSubmodule,
+    registerSubmodule,
+    unregisterSubmodule,
+    homeFolder,
+    closestMangoRepo,
+    isMangoRepo,
+    gitPathFromSubmodule,
+)
+from _cprint import fatal_error, print
+from _tui import uiTypeSelect
+
+
+def init_template(template: str, directory_path: str = '.'):
+    """Initialize a new mango repository using a template."""
+    if not isMangoRepo(directory_path):
+        buildEmptyMangoRepo(directory_path)
+    else:
+        idx = uiTypeSelect(
+            prompt="This is already a mango repo, templating it will remove all existing files. Proceed?",
+            options=["y", "n"],
+            default_id=0,
+        )
+        if idx != 0:
+            return
+    submodule_git = gitPathFromSubmodule(template, registries=[
+        os.path.join(homeFolder(), '.mango', '.templates.registry'),
+        os.path.join(homeFolder(), '.mango', '.submodules', 'builtins', '.mango', '.templates.registry'),
+    ])
+    installSubmodule(
+        repo_path=directory_path,
+        git_path=submodule_git,
+    )
+    print(f"Mango repository initialized with template '{template}' at {directory_path}", color='green')
+
+
+def register_template(repo_path: str, rename_to: str | None = None):
+    """Register the current directory as a template in the home mango's .templates.registry."""
+    # Get the template name (current directory name or rename_to if provided)
+    template_name = rename_to or os.path.basename(repo_path)
+    
+    # Create SubmoduleSourceInfo for the template
+    source_info = SubmoduleSourceInfo(
+        name=template_name,
+        git=f"file://{repo_path}",
+        mode="registered",
+        type="template"
+    )
+    
+    # Register the template
+    try:
+        registerSubmodule(source_info, template_name)
+    except (ItemAlreadyExistsError, GitOperationError) as e:
+        fatal_error(str(e))
+    
+    print(f"Template '{template_name}' registered successfully!", color='green')
+
+
+def unregister_template(template_name: str):
+    """Remove a template from the home mango's .templates.registry."""
+    try:
+        unregisterSubmodule(template_name, 'template')
+    except (ItemNotFoundError, MangoRegistryError) as e:
+        builtins_registry_path = os.path.join(homeFolder(), '.mango', '.submodules', 'builtins', '.mango', '.templates.registry')
+        if os.path.exists(os.path.join(builtins_registry_path, template_name)):
+            fatal_error(f"Cannot unregister built-in template '{template_name}'.")
+        else:
+            fatal_error(str(e))
+    
+    print(f"Template '{template_name}' unregistered successfully!", color='green')
+
+
+def list_template():
+    """List all templates in the local registry."""
+    
+    registries = {
+        "builtins": os.path.join(homeFolder(), '.mango', '.submodules', 'builtins', '.mango', '.templates.registry'),
+        "user": os.path.join(homeFolder(), '.mango', '.templates.registry'),
+    }
+    print("")
+    for registry in registries:
+        print(f"Templates in {registry} registry:", color='cyan')
+        try:
+            templates = os.listdir(registries[registry])
+            if not templates:
+                print("  (no templates found)", color='yellow')
+            for template in templates:
+                print(f"  - {template}", color='white')
+            print("")
+        except FileNotFoundError:
+            print("  (registry not found)", color='yellow')
+
+def main():
+    """The main function for the template script."""
+    # Parse the arguments
+    parser = argparse.ArgumentParser(description="manage registered templates")
+    subparsers = parser.add_subparsers(dest='subcommand', help='available subcommands')
+    
+    # init subcommand
+    init_parser = subparsers.add_parser('init', help='initialize a new mango repository using a template')
+    init_parser.add_argument('template', type=str, help='the template name or git URL')
+    init_parser.add_argument('directory', type=str, nargs='?', default='.', 
+                           help='the directory path where to initialize the mango repo (defaults to current directory)')
+    
+    # register subcommand
+    register_parser = subparsers.add_parser('register', help='register the current directory as a template')
+    register_parser.add_argument('rename_to', type=str, nargs='?', 
+                                help='optional new name for the template')
+    
+    # unregister subcommand
+    unregister_parser = subparsers.add_parser('unregister', help='remove a template from the registry')
+    unregister_parser.add_argument('template_name', type=str, help='the name of the template to remove')
+    
+    # list subcommand
+    subparsers.add_parser('list', help='list all templates in the local registry')
+    
+    args = parser.parse_args()
+    
+    # Execute the appropriate subcommand
+    if args.subcommand == 'init':
+        init_template(args.template, args.directory)
+    elif args.subcommand == 'register':
+        active_mango_repo = closestMangoRepo(os.getcwd())
+        register_template(active_mango_repo, args.rename_to)
+    elif args.subcommand == 'unregister':
+        unregister_template(args.template_name)
+    elif args.subcommand == 'list':
+        list_template()
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
