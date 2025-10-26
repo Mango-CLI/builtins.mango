@@ -28,7 +28,7 @@ def get_help_file_path():
     """Get the path to the help literal files directory"""
     script_file_path = os.path.abspath(__file__)
     script_folder_path = os.path.dirname(script_file_path)
-    return os.path.join(script_folder_path, 'help.literal')
+    return os.path.join(script_folder_path, '.help.literal')
 
 
 def display_general_help():
