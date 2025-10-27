@@ -58,8 +58,9 @@ def remove():
         fatal_error("No mango repository found.")
 
     script_path = os.path.join(current_repo, ".mango", args.script_name)
-    if not existScript(current_repo, args.script_name):
-        fatal_error(f"Script '{args.script_name}' does not exist.")
+    # Even if a script does not exist we should still be able to remove it (e.g. when user removes the script first)
+    # if not existScript(current_repo, args.script_name):
+    #     fatal_error(f"Script '{args.script_name}' does not exist.")
 
     registered_scripts = getRegisteredItems(current_repo)
     aggregated_bindings: list[str] = []

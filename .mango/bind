@@ -18,11 +18,14 @@ from _common import (
     exportSubmoduleBindings,
     bindToItem,
     existSubmodule,
+    existScript,
+    existBinding,
 )
 from _tui import uiTypeSelect
 from _cprint import print
 
 import argparse
+import os
 import re
 
 def bind():
@@ -68,6 +71,14 @@ def bind():
     # Validate that the submodule actually exists
     if submodule and not existSubmodule(repo_path, submodule):
         print(f"Error: Submodule '{submodule}' does not exist in the mango repository.", color="red")
+        exit(1)
+    
+    # Validate that the binding/script item exists
+    if submodule is None and item and not existScript(repo_path, item):
+        print(f"Error: Cannot find script '{item}' in the mango repository.", color="red")
+        exit(1)
+    elif submodule is not None and item and not existBinding(os.path.join(repo_path, '.mango', '.submodules', submodule), item):
+        print(f"Error: Binding '{item}' does not exist in submodule '{submodule}'.", color="red")
         exit(1)
     
     # Perform the binding logic: simply prepend to the first line of the script file
