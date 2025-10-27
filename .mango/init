@@ -26,12 +26,15 @@ def create_mango_repo(repo_path: str, template: str | None = None):
     - repo_path -- the path where the mango repo should be created
     - template -- the template to use (optional)
     """
-    
-    buildEmptyMangoRepo(repo_path)
-    
-    # Handle template if specified
-    if template:
-        handle_template(repo_path, template)
+
+    try:
+        buildEmptyMangoRepo(repo_path)
+
+        # Handle template if specified
+        if template:
+            handle_template(repo_path, template)
+    except Exception as e:
+        fatal_error(f"Failed to create mango repo: {e}")
 
 
 def handle_template(repo_path: str, template: str):
@@ -44,17 +47,18 @@ def handle_template(repo_path: str, template: str):
     from _common import retrievePathFromEnv, homeFolder, globPath, installSubmodule
     
     # Check if template is a git URL
+    print(f"Using template: {template}", color='blue')
     if not template.startswith(('http://', 'https://', 'git@')):
         template_path = retrievePathFromEnv('MANGO_TEMPLATE_PATH', default=[
             os.path.join(homeFolder(), '.mango', '.templates.registry'),
-            os.path.join(homeFolder(), '.mango', 'builtins', ".templates.registry")
+            os.path.join(homeFolder(), '.mango', '.submodules', 'builtins', '.mango', '.templates.registry')
         ])
         template_git = globPath(paths=template_path, name=template)
         if template_git is None:
             print("Template paths searched:", color='gray')
             for path in template_path:
                 print(" - " + color(path, 'gray'))
-            fatal_error(f"Template '{color(template, 'white')}' not found in template paths.")
+            fatal_error(f"{color('Template', 'red')} {color(template, 'white')} {color('not found in template paths.', 'red')}")
     else:
         template_git = template
     installSubmodule(repo_path, template_git)

@@ -53,7 +53,12 @@ def add():
         # and change its permissions, defaulting to 754
         os.chmod(script_path, 0o754)
         # after this, call the hook .on-add
-        executeIfExists(os.path.join(current_repo, '.mango', ".on-add"), args=[args.script_name, '' if args.bind is None else ' '.join(args.bind)])
+        executeIfExists(os.path.join(current_repo, '.mango', ".on-add"), kwargs={
+            'MANGO_REPO_PATH': os.path.abspath(current_repo),
+            'MANGO_SCRIPT_NAME': args.script_name,
+            'MANGO_SCRIPT_PATH': script_path,
+            'MANGO_BINDINGS': '' if args.bind is None else ' '.join(args.bind)
+        })
     
     print("Editing the .instructions file", color='gray')
     

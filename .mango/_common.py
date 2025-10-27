@@ -356,16 +356,29 @@ def installSubmodule(repo_path: str, git_path: str, rename_to: Optional[str] = N
     
     try:
         # Use subprocess directly for now to avoid circular dependency
-        subprocess.run(
-            ["git", "clone", "--recurse-submodules", git_path, submodule_path],
-            check=True,
-            capture_output=True,
-            text=True
-        )
+        if not git_path.startswith("http://") and not git_path.startswith("https://") and not git_path.startswith("git@"):
+            # Use direct copy instead.
+            local_path = git_path.removeprefix("file://").removesuffix(".git")
+            copy_from = os.path.abspath(local_path)
+            shutil.copytree(copy_from, submodule_path)
+        else:
+            subprocess.run(
+                ["git", "clone", "--recurse-submodules", git_path, submodule_path],
+                check=True,
+                capture_output=True,
+                text=True
+            )
     except subprocess.CalledProcessError as e:
         raise GitOperationError(f"Failed to install submodule '{submodule_name}': {e.stderr}")
     
-    executeIfExists(os.path.join(submodule_path, '.on-install'), args=[repo_path])
+    executeIfExists(os.path.join(submodule_path, '.mango', '.on-install'), kwargs={
+        'MANGO_REPO_PATH': repo_path,
+        'SUBMODULE_NAME': rename_to or submodule_name,
+        'MANGO_SUBMODULE_PATH': submodule_path
+    })
+
+
+#: Shared Registry Functions for Templates and Submodules
 
 def globForSubmoduleSources(path: str) -> list[SubmoduleSourceInfo]:
     """glob for submodule sources in a path.
@@ -391,9 +404,6 @@ def globForSubmoduleSources(path: str) -> list[SubmoduleSourceInfo]:
                     mode="registered",
                 ))
     return sources
-
-
-#: Shared Registry Functions for Templates and Submodules
 
 def getUserRegistryPath(item_type: Literal['template', 'submodule']) -> str:
     """Get the appropriate registry path for the given item type.
@@ -488,7 +498,7 @@ def listRegisteredSubmodules(path: str) -> list[SubmoduleSourceInfo]:
     registered_items = []
     if not os.path.exists(path):
         return registered_items
-    
+   
     for entry in os.listdir(path):
         entry_path = os.path.join(path, entry)
         git_path = os.path.join(entry_path, "config")
@@ -822,7 +832,7 @@ def deleteInstructionEntry(
 
 #: Broad Utility Functions
 
-def executeIfExists(executable_path: str, args, throw: bool = False) -> None:
+def executeIfExists(executable_path: str, kwargs: dict, throw: bool = False) -> None:
     """execute a command if it exists in the path
 
     Keyword arguments:
@@ -831,9 +841,11 @@ def executeIfExists(executable_path: str, args, throw: bool = False) -> None:
     """
 
     if os.path.exists(executable_path):
-        quoted_args = [f'"{arg}"' for arg in args]
-        command = " ".join([executable_path] + quoted_args)
-        os.system(command)
+        # Execute the command with kwargs captured as environment variables
+        env = os.environ.copy()
+        for key, value in kwargs.items():
+            env[key] = value
+        subprocess.run([executable_path], env=env)
     elif throw:
         raise FileNotFoundError(f"{executable_path} not found")
 
