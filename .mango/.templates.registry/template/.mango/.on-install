@@ -1,0 +1,37 @@
+#!/bin/bash
+
+source_path=$(dirname "$0")
+target_path="${MANGO_REPO_PATH}/.mango"
+
+# Remove the target directory if it already exists
+if [ -d "$target_path" ]; then
+    rm -rf "$target_path"
+fi
+
+# Recreate the target directory
+mkdir -p "$target_path" && cd "$MANGO_REPO_PATH"
+touch ".mango/.instructions"
+
+# Create the on-install hook
+cat << 'EOL' > .mango/.on-install
+#!/bin/bash
+
+source_path=$(dirname "$0")
+target_path="${MANGO_REPO_PATH}/.mango"
+tmp_name=$(echo "$source_path" | md5sum | cut -d' ' -f1)
+
+# Replace target with source
+rm -rf "/tmp/$tmp_name" && mv -f "$source_path" "/tmp/$tmp_name"
+rm -rf "$target_path" && mv -f "/tmp/$tmp_name" "$target_path"
+EOL
+
+# Create sample README file
+cat << EOL > README.md
+# ${MANGO_SUBMODULE_NAME}
+
+Tell us about the purpose of this template.
+EOL
+
+# Setup git
+git init
+touch .gitignore

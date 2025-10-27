@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Echo python shebang line into the newly created script
+cat << EOF > "$MANGO_SCRIPT_PATH"
+#!/usr/bin/env python3
+
+if __name__ == "__main__":
+    pass
+EOF

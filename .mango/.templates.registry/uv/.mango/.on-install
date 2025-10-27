@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Ensure that uv is installed
+if ! command -v uv &> /dev/null
+then
+    echo "uv could not be found, please install uv first."
+    echo "Official website: https://docs.astral.sh/uv/"
+    exit 1
+fi
+
+source_path=$(dirname "$0")
+target_path="$MANGO_REPO_PATH/.mango"
+tmp_name=$(echo "$source_path" | md5sum | cut -d' ' -f1)
+
+# Replace target with source
+rm -rf "/tmp/$tmp_name" && mv -f "$source_path" "/tmp/$tmp_name"
+rm -rf "$target_path" && mv -f "/tmp/$tmp_name" "$target_path"
+
+# Setup the uv environment within the mango folder
+cd "$target_path" || exit 1

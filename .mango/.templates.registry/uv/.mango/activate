@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cd "$MANGO_REPO_PATH"
+if ! [ -f ".venv" ]; then
+    uv venv
+fi
+
+source .venv/bin/activate

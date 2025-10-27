@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Echo bash shebang line into the newly created script
+echo "#!/bin/bash" > "$MANGO_SCRIPT_PATH"

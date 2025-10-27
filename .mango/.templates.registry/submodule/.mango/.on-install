@@ -1,0 +1,24 @@
+#!/bin/bash
+
+source_path=$(dirname "$0")
+target_path="${MANGO_REPO_PATH}/.mango"
+
+# Remove the target directory if it already exists
+if [ -d "$target_path" ]; then
+    rm -rf "$target_path"
+fi
+
+# Recreate the target directory
+mkdir -p "$target_path" && cd "$MANGO_REPO_PATH"
+touch ".mango/.instructions"
+
+# Create sample README file
+cat << EOL > README.md
+# ${MANGO_SUBMODULE_NAME}
+
+Tell us about the purpose of this submodule.
+EOL
+
+# Setup git
+git init
+touch .gitignore
