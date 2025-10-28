@@ -17,6 +17,7 @@ Subcommands:
 import argparse
 import os
 import sys
+import subprocess
 
 from _common import (
     GitOperationError,
@@ -24,40 +25,20 @@ from _common import (
     ItemNotFoundError,
     MangoRegistryError,
     SubmoduleSourceInfo,
-    buildEmptyMangoRepo,
-    installSubmodule,
     registerSubmodule,
     unregisterSubmodule,
     homeFolder,
     closestMangoRepo,
-    isMangoRepo,
-    gitPathFromSubmodule,
 )
 from _cprint import fatal_error, print
-from _tui import uiTypeSelect
 
 
 def init_template(template: str, directory_path: str = '.'):
     """Initialize a new mango repository using a template."""
-    if not isMangoRepo(directory_path):
-        buildEmptyMangoRepo(directory_path)
-    else:
-        idx = uiTypeSelect(
-            prompt="This is already a mango repo, templating it will remove all existing files. Proceed?",
-            options=["y", "n"],
-            default_id=0,
-        )
-        if idx != 0:
-            return
-    submodule_git = gitPathFromSubmodule(template, registries=[
-        os.path.join(homeFolder(), '.mango', '.templates.registry'),
-        os.path.join(homeFolder(), '.mango', '.submodules', 'builtins', '.mango', '.templates.registry'),
-    ])
-    installSubmodule(
-        repo_path=directory_path,
-        git_path=submodule_git,
-    )
-    print(f"Mango repository initialized with template '{template}' at {directory_path}", color='green')
+    
+    # Use the init command
+    script = f"cd \"{directory_path}\" && mango @init --template {template}"
+    subprocess.run(script, shell=True, check=True)
 
 
 def register_template(repo_path: str, rename_to: str | None = None):

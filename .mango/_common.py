@@ -370,7 +370,6 @@ def installSubmodule(repo_path: str, git_path: str, rename_to: Optional[str] = N
         try:
             # Only works for non-git directories
             shutil.copytree(os.path.abspath(local_path), submodule_path)
-            return
         except Exception as copy_e:
             raise GitOperationError(f"Failed to install submodule '{submodule_name}' via copy: {copy_e}")
     
