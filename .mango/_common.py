@@ -353,23 +353,26 @@ def installSubmodule(repo_path: str, git_path: str, rename_to: Optional[str] = N
     os.makedirs(submodules_dir, exist_ok=True)
     
     submodule_path = os.path.join(submodules_dir, rename_to or submodule_name)
-    
     try:
-        # Use subprocess directly for now to avoid circular dependency
-        if not git_path.startswith("http://") and not git_path.startswith("https://") and not git_path.startswith("git@"):
-            # Use direct copy instead.
-            local_path = git_path.removeprefix("file://").removesuffix(".git")
-            copy_from = os.path.abspath(local_path)
-            shutil.copytree(copy_from, submodule_path)
-        else:
-            subprocess.run(
+        subprocess.run(
                 ["git", "clone", "--recurse-submodules", git_path, submodule_path],
                 check=True,
                 capture_output=True,
                 text=True
             )
     except subprocess.CalledProcessError as e:
-        raise GitOperationError(f"Failed to install submodule '{submodule_name}': {e.stderr}")
+        if git_path.startswith(("http://", "https://", "git@")):
+            raise GitOperationError(f"Failed to install submodule '{submodule_name}' via git: {e.stderr}")
+        # Try local copy as fallback
+        local_path = git_path.removeprefix("file://").removesuffix(".git")
+        if os.path.exists(os.path.join(local_path, ".git")) or runCommandAndGetOutput("git rev-parse --is-bare-repository", at=local_path).strip() == "true":
+            raise GitOperationError(f"Failed to install submodule '{submodule_name}' via git: {e.stderr}")
+        try:
+            # Only works for non-git directories
+            shutil.copytree(os.path.abspath(local_path), submodule_path)
+            return
+        except Exception as copy_e:
+            raise GitOperationError(f"Failed to install submodule '{submodule_name}' via copy: {copy_e}")
     
     executeIfExists(os.path.join(submodule_path, '.mango', '.on-install'), kwargs={
         'MANGO_REPO_PATH': repo_path,
@@ -923,3 +926,32 @@ def gitBasename(git: str) -> str:
     git = git.rstrip('/')
     git = re.sub(r'\.git$', '', git)
     return os.path.basename(git)
+
+def runCommandAndGetOutput(command: str, at: str | None) -> str:
+    """run a command and get its output.
+
+    Keyword arguments:
+    - command -- the command to run
+    - at -- the path to run the command at
+
+    Return: the output of the command
+    """
+
+    if at is not None:
+        result = subprocess.run(
+            command,
+            cwd=at,
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    else:
+        result = subprocess.run(
+            command,
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    return result.stdout.strip()
