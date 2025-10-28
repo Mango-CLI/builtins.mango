@@ -34,5 +34,9 @@
   [0;33mmango @template unregister[0m [0;37mtemplate_name[0m
   [0;33mmango @template list[0m
 
+[32m- Manage the mango executable:[0m
+  [0;33mmango @self update[0m
+  [0;33mmango @self uninstall[0m
+
 [32m- Show this overview or a detailed help page:[0m
   [0;33mmango @help[0m [0;37m(command_name)[0m

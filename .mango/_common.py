@@ -588,13 +588,22 @@ def gitPull(repo_path: str) -> None:
         GitOperationError: If the git pull operation fails
     """
     try:
-        subprocess.run(
+        process = subprocess.Popen(
             ["git", "pull"],
             cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
         )
+        
+        if process.stdout is not None:
+            for line in process.stdout:
+                print(line, end='')
+
+        process.wait()
+
     except subprocess.CalledProcessError as e:
         raise GitOperationError(f"Failed to pull updates in '{repo_path}': {e.stderr}")
 

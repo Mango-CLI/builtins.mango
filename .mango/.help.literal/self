@@ -1,0 +1,12 @@
+[1;37mself[0m
+
+[37mManage the mango executable.[0m
+
+[32m- Update the mango executable.[0m
+        [33mmango @self[0m [37mupdate[0m
+
+[32m- Update the mango builtins. [90m(alias for cd ~ && mango @builtins:submodule update builtins)[0m
+        [33mmango @self[0m [37mupdate --builtins[0m
+
+[32m- Uninstall the mango executable.[0m
+        [33mmango @self[0m [37muninstall[0m

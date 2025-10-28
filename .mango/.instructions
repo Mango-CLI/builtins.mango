@@ -14,5 +14,6 @@ bind: bind
 unbind: unbind
 help: help
 which: which
+self: self
 submodule: submodule
 template: template

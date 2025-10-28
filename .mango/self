@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import os
+
+from _cprint import print, fatal_error
+from _tui import uiTypeSelect
+
+def updateExecutable():
+    script = "curl -LsSf https://raw.githubusercontent.com/RayZh-hs/Mango/main/install.sh | bash"
+    subprocess.run(script, shell=True, check=True)
+
+def updateBuiltins():
+    script = "cd ~ && mango @builtins:submodule update builtins"
+    subprocess.run(script, shell=True, check=True)
+
+def uninstallExecutable():
+    # Confirm uninstallation
+    result = uiTypeSelect(
+        prompt="Are you sure you want to uninstall the mango executable?",
+        options=["y", "n"],
+        default_id=0,
+    )
+    if result == 1:
+        exit(0)
+    # Find the path of the mango executable
+    mango_path = subprocess.run(['which', 'mango'], capture_output=True, text=True).stdout.strip()
+    if mango_path and os.path.exists(mango_path):
+        subprocess.run('sudo rm -f "{}"'.format(mango_path), shell=True, check=True)
+        print(f"Uninstalled mango executable from {mango_path}")
+    else:
+        fatal_error("Mango executable not found.")
+
+def main():
+    parser = argparse.ArgumentParser(description='Manage the mango executable.')
+    subparsers = parser.add_subparsers(dest='command')
+
+    update_parser = subparsers.add_parser('update', help='Update the mango executable or builtins.')
+    update_parser.add_argument('--builtins', action='store_true', help='Update the mango builtins.')
+
+    subparsers.add_parser('uninstall', help='Uninstall the mango executable.')
+
+    args = parser.parse_args()
+
+    if args.command == 'update':
+        if args.builtins:
+            updateBuiltins()
+        else:
+            updateExecutable()
+    elif args.command == 'uninstall':
+        uninstallExecutable()
+    else:
+        parser.print_help()
+
+if __name__ == "__main__":
+    main()
