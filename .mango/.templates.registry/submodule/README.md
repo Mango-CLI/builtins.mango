@@ -12,11 +12,13 @@ When you create a Mango repo using this template, the following folder structure
 ├── .mango
 │   ├── .instructions
 │   └── .on-install
-├── README.md
-└── .gitignore
+├── .gitignore
+├── Development.md
+└── README.md
 ```
 
 - `.on-install`: Sets up git in the directory and initializes the submodule.
 - `.instructions`: Empty. In place to make `.mango` a valid mango folder.
-- `README.md`: Sample README file with the submodule name.
 - `.gitignore`: Empty gitignore file.
+- `Development.md`: Development guide for building mango submodules.
+- `README.md`: Sample README file with the submodule name.

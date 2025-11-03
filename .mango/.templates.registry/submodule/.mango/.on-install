@@ -2,6 +2,7 @@
 
 source_path=$(dirname "$0")
 target_path="${MANGO_REPO_PATH}/.mango"
+development_guide=$(cat "${source_path}/Development.md")
 
 # Remove the target directory if it already exists
 if [ -d "$target_path" ]; then
@@ -11,6 +12,8 @@ fi
 # Recreate the target directory
 mkdir -p "$target_path" && cd "$MANGO_REPO_PATH"
 touch ".mango/.instructions"
+touch ".mango/.on-install"
+chmod +x ".mango/.on-install"
 
 # Create sample README file
 cat << EOL > README.md
@@ -18,6 +21,9 @@ cat << EOL > README.md
 
 Tell us about the purpose of this submodule.
 EOL
+
+# Create the development guide
+echo "$development_guide" > "${target_path}/Development.md"
 
 # Setup git
 git init
