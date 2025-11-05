@@ -26,3 +26,9 @@
 
 - Fixed issue with installing submodules from local git repositories.
 - Fixed `mango @template init` command not executing properly.
+
+## [2.0.2] - 2025-11-5
+
+### Added
+
+- Dev guide to templates "submodule" and "template".
