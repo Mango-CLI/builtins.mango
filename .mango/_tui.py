@@ -1,7 +1,13 @@
 import sys
 import tty
 import termios
-from typing import List, TypedDict, NotRequired
+from typing import List, TypedDict, Any
+try:
+    from typing import NotRequired
+except ImportError:
+    class NotRequired:
+        def __class_getitem__(cls, item):
+            return Any
 import _cprint
 
 from _cprint import print

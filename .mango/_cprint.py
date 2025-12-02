@@ -1,6 +1,9 @@
 import sys
 import builtins
-from typing import Never
+try:
+    from typing import Never
+except ImportError:
+    from typing import NoReturn as Never
 
 # ANSI color codes
 COLORS = {

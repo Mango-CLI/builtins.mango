@@ -32,3 +32,9 @@
 ### Added
 
 - Dev guide to templates "submodule" and "template".
+
+## [2.0.3] - 2025-12-2
+
+### Fixed
+
+- Issue with `mango @add` command not working with python <= 3.10 due to typing import error.
